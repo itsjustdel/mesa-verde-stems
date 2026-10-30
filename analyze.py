@@ -3,7 +3,8 @@
 Usage: .venv/Scripts/python analyze.py <song.(wav|mp3|flac)> [out_dir]
 
 Writes to out_dir (default: out/<song name>/):
-  stems/*.wav        Demucs htdemucs_6s stems, plus guitar_L/guitar_R (split by pan position) when the guitars sit apart
+  stems/*.wav        Demucs htdemucs_6s stems (bass from htdemucs_ft instead), plus guitar_L/guitar_R (split by pan
+                     position) when the guitars sit apart
   midi/*.mid         Basic Pitch transcription of each pitched stem
   summary.md         tempo, key, chords per bar, note ranges, bass/lead lines
   analysis.json      the same data for player.html (chords, beats, notes)
@@ -39,6 +40,25 @@ def separate(audio, out):
     for f in src.glob("*.wav"):
         f.replace(stems / f.name)
     return stems
+
+
+def better_bass(audio, out, stems):
+    """htdemucs_6s's bass ducks on many kick hits (the kick takes the low end). The fine-tuned 4-stem model
+    (htdemucs_ft, a specialist model per stem) separates bass more cleanly (on 04: 27% fewer dropouts), so its
+    bass replaces the 6-stem one; the 6-stem model still provides the guitars and piano. Runs once per song;
+    stems/.bass_ft marks it done."""
+    marker = stems / ".bass_ft"
+    if marker.exists():
+        return
+    ft = out / "_ft" / "htdemucs_ft" / audio.stem / "bass.wav"
+    if not ft.exists():
+        import demucs.separate
+        demucs.separate.main(["-n", "htdemucs_ft", "-o", str(out / "_ft"), str(audio)])
+    import shutil
+    shutil.copy(ft, stems / "bass.wav")
+    (stems / "bass_ft.wav").unlink(missing_ok=True)  # the comparison lane is now the bass itself
+    marker.touch()
+    print("bass: replaced with htdemucs_ft's bass")
 
 
 def split_guitar(stems, threshold=0.8, sharpness=8.0):
@@ -189,6 +209,7 @@ def main():
     stems = out / "stems"
     if not (stems / "bass.wav").exists():
         stems = separate(audio, out)
+    better_bass(audio, out, stems)
     guitar_corr = split_guitar(stems)
     notes = transcribe(stems, out)
     if "guitar_L" in notes and "guitar_R" in notes:
