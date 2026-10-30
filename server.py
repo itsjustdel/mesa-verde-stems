@@ -6,7 +6,9 @@ Usage: <venv python> server.py [music_dir] [port]
 API
   GET  /api/songs           every audio file under music_dir, with split status
   GET  /api/original?id=    the untouched source file
-  POST /api/split?id=<id>   copy the song to in/<id><ext> and run analyze.py on it (one at a time)
+  POST /api/split?id=<id>   copy the song to in/<id><ext>, run analyze.py on it, then build_arrangement.py
+                            (one job at a time; the stems are playable while the arrangement builds)
+  POST /api/arrange?id=     build the arrangement for a song split before that happened automatically
   POST /api/export          {id, parts: [{path, gain}], label} or {id, original: true}: an MP3 of the mix,
                             kept in out/<id>/exports
 """
@@ -27,7 +29,9 @@ MUSIC = Path(sys.argv[1]).expanduser() if len(sys.argv) > 1 else Path.home() / "
 PORT = int(sys.argv[2]) if len(sys.argv) > 2 else 8765
 EXTS = {".flac", ".wav", ".mp3", ".m4a", ".ogg", ".aiff", ".aif"}
 
-jobs = {}  # id -> {"state": "queued"|"running"|"done"|"error", "log": str}
+# id -> {"state": "queued"|"running"|"arranging"|"done"|"error", "log": str}
+# running = splitting (analyze.py); arranging = building the arrangement layers (build_arrangement.py)
+jobs = {}
 queue_lock = threading.Lock()
 
 
@@ -49,28 +53,51 @@ def scan():
 
 
 def status(s):
-    if (ROOT / "out" / s["id"] / "analysis.json").exists():
+    """The split's status: the stems are playable once analysis.json exists, even while the arrangement builds."""
+    state = jobs.get(s["id"], {}).get("state", "new")
+    if (ROOT / "out" / s["id"] / "analysis.json").exists() and state not in ("queued", "running"):
         return "done"
-    return jobs.get(s["id"], {}).get("state", "new")
+    return state
+
+
+def run_step(sid, args):
+    """Run one pipeline script, keeping the tail of its output as the job's log. True if it succeeded."""
+    proc = subprocess.Popen([sys.executable, *args], cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                            text=True, errors="replace")
+    for line in proc.stdout:
+        if "WARNING:root" not in line and "Warning" not in line:
+            jobs[sid]["log"] = (jobs[sid]["log"] + line)[-2000:]
+    return proc.wait() == 0
 
 
 def run_split(s):
+    """Split the song, then build its arrangement layers (build_arrangement.py's default ones)."""
     sid = s["id"]
     src = ROOT / "in" / f"{sid}{s['ext']}"
-    with queue_lock:  # one split at a time; the GPU and RAM can't take more
+    with queue_lock:  # one job at a time; the GPU and RAM can't take more
         jobs[sid] = {"state": "running", "log": ""}
         try:
             src.parent.mkdir(exist_ok=True)
             if not src.exists():
                 shutil.copy2(s["path"], src)
-            proc = subprocess.Popen([sys.executable, "analyze.py", str(src), str(ROOT / "out" / sid)], cwd=ROOT,
-                                    stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, errors="replace")
-            for line in proc.stdout:
-                if "WARNING:root" not in line:
-                    jobs[sid]["log"] = (jobs[sid]["log"] + line)[-2000:]
-            jobs[sid]["state"] = "done" if proc.wait() == 0 else "error"
+            if not run_step(sid, ["analyze.py", str(src), str(ROOT / "out" / sid)]):
+                jobs[sid]["state"] = "error"
+                return
+            jobs[sid]["state"] = "arranging"
+            jobs[sid]["state"] = "done" if run_step(sid, ["build_arrangement.py", sid]) else "arrange_error"
         except Exception as e:  # surface it in the player rather than killing the thread silently
             jobs[sid] = {"state": "error", "log": repr(e)}
+
+
+def run_arrange(s):
+    """Build the arrangement for a song that was split before this happened automatically."""
+    sid = s["id"]
+    with queue_lock:
+        jobs[sid] = {"state": "arranging", "log": ""}
+        try:
+            jobs[sid]["state"] = "done" if run_step(sid, ["build_arrangement.py", sid]) else "arrange_error"
+        except Exception as e:
+            jobs[sid] = {"state": "arrange_error", "log": repr(e)}
 
 
 def export_mp3(req):
@@ -131,7 +158,9 @@ class Handler(SimpleHTTPRequestHandler):
         url = urlparse(self.path)
         if url.path == "/api/songs":
             songs = scan()
-            return self.send_json([{**s, "status": status(s), "log": jobs.get(s["id"], {}).get("log", "")}
+            return self.send_json([{**s, "status": status(s), "log": jobs.get(s["id"], {}).get("log", ""),
+                                    "arranging": jobs.get(s["id"], {}).get("state") in ("arranging", "arrange_queued"),
+                                    "arrange_failed": jobs.get(s["id"], {}).get("state") == "arrange_error"}
                                    for s in songs.values()])
         if url.path == "/api/original":
             # the untouched file straight from the music folder, so you hear exactly what you picked
@@ -160,6 +189,15 @@ class Handler(SimpleHTTPRequestHandler):
             jobs[sid] = {"state": "queued", "log": ""}
             threading.Thread(target=run_split, args=(s,), daemon=True).start()
             return self.send_json({"status": "queued"})
+        if url.path == "/api/arrange":
+            s = scan().get(parse_qs(url.query).get("id", [""])[0])
+            if not s or status(s) != "done":
+                return self.send_json({"error": "song not split"}, 404)
+            if jobs.get(s["id"], {}).get("state") in ("queued", "running", "arranging", "arrange_queued"):
+                return self.send_json({"status": "arranging"})
+            jobs[s["id"]] = {"state": "arrange_queued", "log": ""}
+            threading.Thread(target=run_arrange, args=(s,), daemon=True).start()
+            return self.send_json({"status": "arranging"})
         if url.path == "/api/export":
             try:
                 req = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))) or b"{}")

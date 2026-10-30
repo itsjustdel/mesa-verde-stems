@@ -138,6 +138,7 @@
     </span>
     <button id="exportBtn" title="Save what you're hearing (the whole song, with your mutes, solos, volumes and smoothing) as an MP3">⬇ MP3</button>
   </div>
+  <div class="hint" id="arrBanner" hidden></div>
   <div class="hint">Pull the handle or drag waveforms to scrub · drag chord lane to set loop · Space play · L loop · number keys solo · O original</div>
   <div class="now">
     <div><div class="label">Chord</div><div class="chord" id="chord">–</div></div>
@@ -297,6 +298,7 @@ function teardown() {
   $("bassSmoothBox").hidden = true;
   $("keysSmoothBox").hidden = true;
   $("percSmoothBox").hidden = true;
+  $("arrBanner").hidden = true;
   bassSmooth = keysSmooth = percSmooth = null;
   $("splitBtn").hidden = true;
   smooth = null; violinMode = "line";  for (const t of tracks) t.gain.disconnect();
@@ -373,6 +375,31 @@ async function loadSong(token) {
   showLoop();
   draw();
   mix();
+  followArrangement(token);
+}
+
+// A split song builds its arrangement in the background (server: build_arrangement.py). Start it if it never
+// ran, say so while it runs, and load it when it's ready: straight away if nothing is playing, else on a click.
+async function followArrangement(token) {
+  const banner = $("arrBanner");
+  if (tracks.some(t => t.group === "str") && !song.arranging) { banner.hidden = true; return; }
+  if (!song.arranging && !song.arrange_failed) await fetch(`/api/arrange?id=${encodeURIComponent(song.id)}`, { method: "POST" });
+  banner.hidden = false;
+  banner.textContent = song.arrange_failed ? "Building the arrangement failed; the server log says why."
+    : "Building the percussion in the background… it loads here when it's ready (several minutes for a long song).";
+  if (song.arrange_failed) return;
+  while (token === loadToken) {
+    await new Promise(r => setTimeout(r, 15000));
+    await refreshSongs();
+    if (token !== loadToken) return;
+    const s = songs.find(x => x.id === song.id);
+    if (s.arranging) continue;
+    if (s.arrange_failed) { banner.textContent = "Building the arrangement failed; the server log says why."; return; }
+    if (!playing) return choose(song.id); // reload with the new layers
+    banner.innerHTML = 'The arrangement is ready. <button id="arrLoad">Load it</button>';
+    $("arrLoad").onclick = () => choose(song.id);
+    return;
+  }
 }
 
 function makeRow(label, color, cls) {

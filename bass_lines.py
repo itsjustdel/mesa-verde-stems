@@ -82,7 +82,8 @@ def main():
     for old in ("cello.wav", "contrabass.wav"):  # the single render from before this slider existed
         (out / old).unlink(missing_ok=True)
     info = json.load(open(out / "strings.json"))
-    info["bass_smooth"] = {"parts": ["cello", "contrabass"], "levels": len(a.LEVELS), "default": DEFAULT_LEVEL}
+    info["parts"] += [n for n in ("cello", "contrabass") if n not in info["parts"]]
+    info["bass_smooth"] ={"parts": ["cello", "contrabass"], "levels": len(a.LEVELS), "default": DEFAULT_LEVEL}
     json.dump(info, open(out / "strings.json", "w"))
     print("registered bass_smooth")
 

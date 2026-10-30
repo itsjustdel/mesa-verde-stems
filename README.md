@@ -32,7 +32,15 @@ Open http://127.0.0.1:8765/player.html, pick a song from the Music folder and pr
 
 ## Building the arrangement for a split song
 
-Run in order with the song id from the player's URL (`?song=<id>`):
+This happens automatically: after a split the server runs `build_arrangement.py`, which builds the layers in
+its `DEFAULT_LAYERS` (currently just the tuned percussion), and the player loads them when they're ready. Opening
+a song that was split earlier starts its build too. For more layers:
+
+```bash
+C:/Users/itsju/.venvs/stems/Scripts/python.exe build_arrangement.py <id> violins bass keys perc   # or: all
+```
+
+The steps it runs, with the song id from the player's URL (`?song=<id>`):
 
 | Script | Makes |
 |---|---|
