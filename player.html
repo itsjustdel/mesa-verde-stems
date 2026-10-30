@@ -8,7 +8,7 @@
   :root {
     --bg: #111317; --panel: #1a1d23; --line: #2a2e36; --text: #e6e8ec; --dim: #8a909c;
     --accent: #f2b544; --play: #ffffff; --err: #e66a5a;
-    --bass: #5aa9e6; --drums: #e66a5a; --guitar: #f2b544; --guitar_L: #f2b544; --guitar_R: #f28c44; --violin: #ff7aa8; --viola: #d96cff; --violin2: #d96cff; --violinL1: #ff9bbd; --violinL2: #ff7aa8; --violinL3: #e65c8f; --violinL4: #d94c80; --violinL5: #bf3f73; --violinL6: #a53566; --violinR1: #e08cff; --violinR2: #d96cff; --violinR3: #b84fe0; --violinR4: #a043cc; --violinR5: #8a38b3; --violinR6: #742e99; --secE: #ffd37a; --secA: #ffb36b; --secD: #ff9466; --secG: #e67a5c;
+    --bass: #5aa9e6; --bass_ft: #8cc8f0; --guitars_ft: #f7d27a; --drums: #e66a5a; --guitar: #f2b544; --guitar_L: #f2b544; --guitar_R: #f28c44; --violin: #ff7aa8; --viola: #d96cff; --violin2: #d96cff; --violinL1: #ff9bbd; --violinL2: #ff7aa8; --violinL3: #e65c8f; --violinL4: #d94c80; --violinL5: #bf3f73; --violinL6: #a53566; --violinR1: #e08cff; --violinR2: #d96cff; --violinR3: #b84fe0; --violinR4: #a043cc; --violinR5: #8a38b3; --violinR6: #742e99; --secE: #ffd37a; --secA: #ffb36b; --secD: #ff9466; --secG: #e67a5c;
     --secLE: #fff09a; --secLA: #f5dd73; --secLD: #e6c75c; --secLG: #ccae4a; --secRE: #9af0d8; --secRA: #73dcc0; --secRD: #5cc4a8; --secRG: #4aab90; --cello: #66e0ff; --contrabass: #4f8cff; --keys: #f0e6d8; --perc: #8fe36b; --vocals: #b48cf0; --piano: #5ad1a4; --other: #9aa3b0;
   }
   * { box-sizing: border-box; }
@@ -165,8 +165,10 @@
 </div>
 
 <script>
-const ORDER = ["vocals", "guitar", "guitar_L", "guitar_R", "bass", "drums", "piano", "other"];
-const LABEL = { guitar_L: "Guitar L", guitar_R: "Guitar R", violin: "Violin L", violin2: "Violin R", contrabass: "Dbl bass",
+const ORDER = ["vocals", "guitar", "guitar_L", "guitar_R", "guitars_ft", "bass", "bass_ft", "drums", "piano", "other"];
+// stems from a second separation model, for comparing: heard only when soloed, so they never double their counterparts
+const COMPARE = ["guitars_ft", "bass_ft"];
+const LABEL = { guitar_L: "Guitar L", guitar_R: "Guitar R", guitars_ft: "Guitars (new model)", bass_ft: "Bass (new model)", violin: "Violin L", violin2: "Violin R", contrabass: "Dbl bass",
                 secE: "Section E", secA: "Section A", secD: "Section D", secG: "Section G", keys: "Keys", perc: "Percussion" };
 const RANK = /^violin([LR])(\d)$/; // violinL1..3 / violinR1..3: one guitar split into violins by note rank
 const labelOf = s => LABEL[s] || (RANK.test(s) ? s.replace(RANK, (_, side, n) => `Violin ${side}${n}`)
@@ -531,6 +533,7 @@ function violinHidden(t) {
 function trackOn(t, anySolo = tracks.some(x => x.solo)) {
   // "Only violins" etc. work through the lanes' S buttons (syncPartSolo), so here they behave like Strings only
   const inMode = t.group === "str" ? arrMode !== "band" : arrMode === "band" || arrMode === "layer";
+  if (COMPARE.includes(t.name) && !t.solo) return false;
   return !useOriginal && !t.mute && (anySolo ? t.solo : inMode && !violinHidden(t));
 }
 
