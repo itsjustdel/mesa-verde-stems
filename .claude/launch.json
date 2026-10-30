@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "player",
+      "runtimeExecutable": "C:\\Users\\itsju\\.venvs\\stems\\Scripts\\python.exe",
+      "runtimeArgs": ["-u", "server.py"],
+      "port": 8765
+    }
+  ]
+}

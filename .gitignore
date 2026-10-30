@@ -1,0 +1,9 @@
+# generated per song: stems, MIDI, string/keys renders, MP3 exports (gigabytes)
+out/
+# copies of songs from the music folder
+in/
+# downloaded FluidSynth build and SoundFont (see README)
+tools/
+__pycache__/
+*.pyc
+tmp/

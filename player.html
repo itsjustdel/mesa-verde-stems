@@ -1,0 +1,892 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stem Player</title>
+<style>
+  :root {
+    --bg: #111317; --panel: #1a1d23; --line: #2a2e36; --text: #e6e8ec; --dim: #8a909c;
+    --accent: #f2b544; --play: #ffffff; --err: #e66a5a;
+    --bass: #5aa9e6; --drums: #e66a5a; --guitar: #f2b544; --guitar_L: #f2b544; --guitar_R: #f28c44; --violin: #ff7aa8; --viola: #d96cff; --violin2: #d96cff; --violinL1: #ff9bbd; --violinL2: #ff7aa8; --violinL3: #e65c8f; --violinL4: #d94c80; --violinL5: #bf3f73; --violinL6: #a53566; --violinR1: #e08cff; --violinR2: #d96cff; --violinR3: #b84fe0; --violinR4: #a043cc; --violinR5: #8a38b3; --violinR6: #742e99; --secE: #ffd37a; --secA: #ffb36b; --secD: #ff9466; --secG: #e67a5c;
+    --secLE: #fff09a; --secLA: #f5dd73; --secLD: #e6c75c; --secLG: #ccae4a; --secRE: #9af0d8; --secRA: #73dcc0; --secRD: #5cc4a8; --secRG: #4aab90; --cello: #66e0ff; --contrabass: #4f8cff; --keys: #f0e6d8; --vocals: #b48cf0; --piano: #5ad1a4; --other: #9aa3b0;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.4 system-ui, Segoe UI, sans-serif; }
+  [hidden] { display: none !important; }
+
+  .picker { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 16px 20px 6px; }
+  select { background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 6px;
+           padding: 7px 10px; font: inherit; font-size: 15px; font-weight: 600; max-width: min(560px, 100%); }
+  .meta { color: var(--dim); }
+  .meta b { color: var(--text); font-weight: 600; }
+
+  .transport { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 8px 20px 12px; }
+  button { background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 6px;
+           padding: 6px 12px; font: inherit; cursor: pointer; }
+  button:hover { border-color: var(--dim); }
+  button:disabled { opacity: .5; cursor: default; }
+  button.on, button.primary { background: var(--accent); color: #111; border-color: var(--accent); }
+  #play { width: 84px; font-weight: 600; }
+  #time { font-variant-numeric: tabular-nums; min-width: 110px; }
+  .spacer { flex: 1; }
+  .smooth { display: inline-flex; align-items: center; gap: 8px; color: var(--dim); }
+  .smooth input { width: 110px; accent-color: var(--accent); }
+  .smooth b { min-width: 32px; color: var(--text); font-variant-numeric: tabular-nums; }
+  .sep { width: 1px; height: 22px; background: var(--line); margin: 0 4px; }
+  .hint { color: var(--dim); font-size: 12px; padding: 0 20px 8px; }
+
+  .now { display: flex; gap: 28px; align-items: flex-end; padding: 4px 20px 14px; }
+  .now .chord { font-size: 44px; font-weight: 700; line-height: 1; min-width: 160px; }
+  .now .next { color: var(--dim); font-size: 20px; }
+  .now .label { color: var(--dim); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; }
+  .now .bass { font-size: 24px; font-weight: 600; color: var(--bass); }
+
+  .lanes { position: relative; margin: 0 20px 20px; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--panel); }
+  .row { display: grid; grid-template-columns: 210px minmax(0, 1fr); border-top: 1px solid var(--line); height: 64px; overflow: hidden; }
+  .row:first-child { border-top: 0; }
+  .row.chords { height: 40px; }
+  .row.ruler { height: 26px; }
+  .wave { position: relative; min-width: 0; }
+  .wave canvas { position: absolute; inset: 0; display: block; width: 100%; height: 100%; cursor: pointer; }
+  .row.chords canvas { cursor: col-resize; }
+  .ctrl { display: flex; align-items: center; gap: 6px; padding: 0 10px; border-right: 1px solid var(--line); }
+  .ctrl .name { flex: 1; font-weight: 600; text-transform: capitalize; white-space: nowrap; display: flex; align-items: center; gap: 8px; }
+  .ctrl .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .ctrl button { padding: 2px 7px; font-size: 12px; }
+  .ctrl input[type=range] { width: 64px; accent-color: var(--accent); }
+  .row.muted canvas { opacity: .25; }
+  .row.absent .name { color: var(--dim); font-weight: 400; }
+
+  #overlay { position: absolute; top: 0; bottom: 0; left: 210px; right: 0; pointer-events: none; }
+  #playhead { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: var(--play); box-shadow: 0 0 6px rgba(255,255,255,.6); }
+  #handle { position: absolute; top: 0; left: -9px; width: 20px; height: 26px; pointer-events: auto; cursor: grab; touch-action: none;
+            background: var(--play); border-radius: 4px 4px 10px 10px; box-shadow: 0 1px 6px rgba(0,0,0,.5); }
+  #handle::after { content: ""; position: absolute; left: 6px; right: 6px; top: 7px; height: 9px; border-left: 2px solid #555; border-right: 2px solid #555; }
+  #handle:hover { transform: scale(1.1); }
+  #handle.dragging { cursor: grabbing; transform: scale(1.15); }
+  #loop { position: absolute; top: 0; bottom: 0; background: rgba(242,181,68,.12); border-left: 1px solid var(--accent); border-right: 1px solid var(--accent); display: none; }
+  #loop.off { background: rgba(255,255,255,.04); border-color: var(--dim); border-style: dashed; }
+
+  .panel { margin: 12px 20px; padding: 24px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); max-width: 640px; }
+  .panel p { margin: 0 0 14px; color: var(--dim); }
+  .panel pre { margin: 14px 0 0; max-height: 160px; overflow: auto; color: var(--dim); font-size: 12px; white-space: pre-wrap; }
+  .panel.error pre { color: var(--err); }
+  .bar { height: 4px; background: var(--line); border-radius: 2px; margin-top: 12px; }
+  .bar div { height: 100%; width: 0; background: var(--accent); border-radius: 2px; transition: width .2s; }
+  @media (max-width: 700px) {
+    .row { grid-template-columns: 130px minmax(0, 1fr); } #overlay { left: 130px; }
+    .ctrl input[type=range] { display: none; }
+    .now .chord { font-size: 32px; min-width: 110px; }
+  }
+</style>
+</head>
+<body>
+<div class="picker">
+  <select id="song" aria-label="Song"><option>Loading songs…</option></select>
+  <span class="meta" id="metaKey" hidden>Key <b id="key">–</b></span>
+  <span class="meta" id="metaTempo" hidden>Tempo <b id="tempo">–</b></span>
+</div>
+
+<!-- shown when the chosen song hasn't been split yet, while splitting, or while loading -->
+<div class="panel" id="panel" hidden>
+  <p id="panelText"></p>
+  <button class="primary" id="split">Split this song</button>
+  <button id="previewOrig">▶ Play original</button>
+  <div class="bar" id="panelBar" hidden><div id="progress"></div></div>
+  <pre id="log" hidden></pre>
+</div>
+
+<div id="app" hidden>
+  <div class="transport">
+    <button id="rewind" title="Back to start / loop start (Home)">⏮</button>
+    <button id="back" title="Back 5s (←)">«5s</button>
+    <button id="play">▶ Play</button>
+    <button id="fwd" title="Forward 5s (→)">5s»</button>
+    <span id="time">0:00 / 0:00</span>
+    <span class="sep"></span>
+    <button id="loopBtn" title="Loop on/off (L). With no region, loops the current bar">⟳ Loop</button>
+    <button id="loopA" title="Set loop start here ([)">A</button>
+    <button id="loopB" title="Set loop end here (])">B</button>
+    <button id="loopClear" title="Clear loop region">✕</button>
+    <span class="sep"></span>
+    <button id="mode" title="Toggle stems / original file (O)">Stems</button>
+    <button id="arr" title="Cycle: band, band + strings, strings only, then only the violins, one side's violins, the cello or the bass (A)" hidden>Band</button>    <button id="splitBtn" title="Violins: one line per guitar, one violin per note rank, one E/A/D/G section, or a section per guitar (V)" hidden>Violin: 1 line</button>
+    <span id="smoothBox" class="smooth" hidden title="How the violins follow the guitar: 0 re-bows on every hit, 4 holds each note until the chord changes.">
+      Violin smooth
+      <input type="range" id="smooth" min="0" max="4" step="1" value="2" aria-label="Violin smoothing">
+      <b id="smoothVal">2</b>
+      <button id="rawBtn" title="Switch between level 0 and your smoothing level (R)">Raw</button>
+      <button id="textureBtn" title="Full section: all four violins on every chord. Follow guitar: as many violins as the guitar plays notes at once, resting when it rests." hidden>Texture: full section</button>
+    </span>
+    <span id="bassSmoothBox" class="smooth" hidden title="How the cello and double bass follow the bass guitar: 0 every note, 4 the chord's root held until the chord changes.">
+      Bass smooth
+      <input type="range" id="bassSmooth" min="0" max="4" step="1" value="1" aria-label="Cello and bass smoothing">
+      <b id="bassSmoothVal">1</b>
+    </span>
+    <span id="keysSmoothBox" class="smooth" hidden title="How often the keys re-strike: 0 on every guitar hit, 4 only when the chord changes.">
+      Keys smooth
+      <input type="range" id="keysSmooth" min="0" max="4" step="1" value="2" aria-label="Keys smoothing">
+      <b id="keysSmoothVal">2</b>
+      <button id="keysRhythm" title="What the keys' re-strikes follow: the guitars, the drums or the bass guitar" hidden>Rhythm: guitar</button>
+    </span>
+    <button id="exportBtn" title="Save what you're hearing (the whole song, with your mutes, solos, volumes and smoothing) as an MP3">⬇ MP3</button>
+  </div>
+  <div class="hint">Pull the handle or drag waveforms to scrub · drag chord lane to set loop · Space play · L loop · number keys solo · O original</div>
+  <div class="now">
+    <div><div class="label">Chord</div><div class="chord" id="chord">–</div></div>
+    <div><div class="label">Next</div><div class="next" id="next">–</div></div>
+    <div><div class="label">Bass note</div><div class="bass" id="bassnote">–</div></div>
+  </div>
+  <div class="lanes" id="lanes">
+    <div id="overlay"><div id="loop"></div><div id="playhead"><div id="handle" title="Drag to move through the song"></div></div></div>
+  </div>
+</div>
+
+<script>
+const ORDER = ["vocals", "guitar", "guitar_L", "guitar_R", "bass", "drums", "piano", "other"];
+const LABEL = { guitar_L: "Guitar L", guitar_R: "Guitar R", violin: "Violin L", violin2: "Violin R", contrabass: "Dbl bass",
+                secE: "Section E", secA: "Section A", secD: "Section D", secG: "Section G", keys: "Keys" };
+const RANK = /^violin([LR])(\d)$/; // violinL1..3 / violinR1..3: one guitar split into violins by note rank
+const labelOf = s => LABEL[s] || (RANK.test(s) ? s.replace(RANK, (_, side, n) => `Violin ${side}${n}`)
+  : /^sec[LR][EADG]$/.test(s) ? `Section ${s[3]} ${s[4]}` : s);
+const ARR_MODES =["band", "layer", "only"];
+const ARR_LABEL = { band: "Band", layer: "Band + strings & keys", only: "Strings & keys only",
+                    violins: "Only violins", violinsL: "Only left violins", violinsR: "Only right violins",
+                    cello: "Only cello", contrabass: "Only bass", keys: "Only keys" };
+const SINGLE_PARTS = ["keys", "cello", "contrabass"]; // "Only …" steps that are one lane each
+const NOTE = ["C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"];
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const fmt = t => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, "0")}`;
+const $ = id => document.getElementById(id);
+const fresh = url => `${url}${url.includes("?") ? "&" : "?"}v=${Date.now()}`; // never reuse a cached file
+
+const ctx = new AudioContext();
+const master = ctx.createGain();
+master.connect(ctx.destination);
+
+let songs = [], song = null, loadToken = 0;
+let data = null, duration = 0, tracks = [], original = null;
+let playing = false, startedAt = 0, offset = 0, loop = null, loopOn = false, useOriginal = false, arrMode = "band";
+let previewEl = null;
+let smooth = null; // {info, level, last}: which pre-rendered violin smoothing level is loaded
+let bassSmooth = null; // the same for the cello and double bass
+let keysSmooth = null; // and for the keys
+let violinMode = "line"; // line: one violin per guitar · ranks: one violin per note rank · section: 4-part violin section
+// The "Only …" steps work on whole groups: every violin part (an E/A/D/G section stays together),
+// one guitar's violins, the keys, the cello or the double bass.
+const isViolinPart = t => t.group === "str" && !SINGLE_PARTS.includes(t.name);
+const sideOf = t => /^(violin|secL.|violinL\d)$/.test(t.name) ? "L" : /^(violin2|secR.|violinR\d)$/.test(t.name) ? "R" : null;
+const stepWants = (t, step) => SINGLE_PARTS.includes(step) ? t.name === step
+  : isViolinPart(t) && (step === "violins" || sideOf(t) === step.slice(-1));
+const VIOLIN_LABEL = { line: "Violin: 1 line", ranks: "Violin: per note", section: "Violin: section",
+                       sections: "Violin: section per guitar" };
+const isSecBoth = t => /^sec[EADG]$/.test(t.name);      // one E/A/D/G section from both guitars
+const isSecSide = t => /^sec[LR][EADG]$/.test(t.name);  // an E/A/D/G section per guitar
+
+async function load(url) {
+  const res = await fetch(fresh(url), { cache: "no-store" });
+  if (!res.ok) throw new Error(`${res.status} for ${url}`);
+  return ctx.decodeAudioData(await res.arrayBuffer());
+}
+
+// ---------- song list ----------
+
+async function refreshSongs() {
+  songs = await (await fetch("/api/songs", { cache: "no-store" })).json();
+  return songs;
+}
+
+function fillPicker() {
+  const sel = $("song"), keep = sel.value;
+  sel.innerHTML = "";
+  const groups = {};
+  for (const s of songs) (groups[s.folder] ||= []).push(s);
+  for (const [folder, list] of Object.entries(groups)) {
+    const g = document.createElement("optgroup");
+    g.label = folder;
+    for (const s of list) g.append(new Option(`${s.status === "done" ? "● " : "○ "}${s.title}`, s.id));
+    sel.append(g);
+  }
+  if (keep && songs.some(s => s.id === keep)) sel.value = keep;
+}
+
+async function choose(id) {
+  const token = ++loadToken;
+  teardown();
+  song = songs.find(s => s.id === id);
+  if (!song) return;
+  $("song").value = id;
+  history.replaceState(null, "", `?song=${encodeURIComponent(id)}`);
+  document.title = `${song.title} · Stems`;
+  if (song.status === "done") return loadSong(token);
+  showPanel();
+  if (song.status === "queued" || song.status === "running") watchSplit(token);
+}
+
+function showPanel() {
+  const s = song, busy = s.status === "queued" || s.status === "running";
+  $("panel").hidden = false;
+  $("panel").classList.toggle("error", s.status === "error");
+  $("panelText").textContent =
+    s.status === "error" ? "Splitting failed. Log below; you can try again." :
+    busy ? `Splitting “${s.title}” into stems and transcribing… (about a minute on the GPU)` :
+    `“${s.title}” hasn't been split yet. Play the original to check it's the right song, then split it.`;
+  $("split").hidden = busy;
+  $("split").textContent = s.status === "error" ? "Try again" : "Split this song";
+  $("panelBar").hidden = !busy;
+  $("log").hidden = !s.log;
+  $("log").textContent = s.log || "";
+  $("log").scrollTop = 1e9;
+}
+
+async function startSplit() {
+  const token = loadToken;
+  stopPreview();
+  await fetch(`/api/split?id=${encodeURIComponent(song.id)}`, { method: "POST" });
+  song.status = "queued";
+  showPanel();
+  watchSplit(token);
+}
+
+async function watchSplit(token) {
+  // rough progress from the log: separation, then 5 transcriptions, then done
+  const steps = ["Separating", "bass", "guitar", "piano", "other", "vocals", "done"];
+  while (token === loadToken) {
+    await new Promise(r => setTimeout(r, 1500));
+    await refreshSongs();
+    if (token !== loadToken) return;
+    const s = songs.find(x => x.id === song.id);
+    Object.assign(song, s);
+    const reached = steps.filter(k => (s.log || "").includes(k)).length;
+    $("progress").style.width = `${Math.max(5, (reached / steps.length) * 100)}%`;
+    if (s.status === "done") { fillPicker(); return loadSong(token); }
+    showPanel();
+    if (s.status === "error") return;
+  }
+}
+
+function togglePreview() {
+  if (previewEl) return stopPreview();
+  previewEl = new Audio(fresh(`/api/original?id=${encodeURIComponent(song.id)}`));
+  previewEl.play();
+  previewEl.onended = stopPreview;
+  $("previewOrig").textContent = "❚❚ Stop original";
+}
+
+function stopPreview() {
+  if (previewEl) { previewEl.pause(); previewEl = null; }
+  $("previewOrig").textContent = "▶ Play original";
+}
+
+// ---------- loading a split song ----------
+
+function teardown() {
+  stopPreview();
+  stopSources();
+  playing = false; offset = 0; loop = null; loopOn = false; useOriginal = false; arrMode = "band";
+  $("arr").hidden = true;
+  $("smoothBox").hidden = true;
+  $("bassSmoothBox").hidden = true;
+  $("keysSmoothBox").hidden = true;
+  bassSmooth = keysSmooth = null;
+  $("splitBtn").hidden = true;
+  smooth = null; violinMode = "line";  for (const t of tracks) t.gain.disconnect();
+  original?.gain.disconnect();
+  tracks = []; original = null; data = null; duration = 0;
+  document.querySelectorAll("#lanes .row").forEach(r => r.remove());
+  $("app").hidden = true;
+  $("panel").hidden = true;
+  $("metaKey").hidden = $("metaTempo").hidden = true;
+  $("play").textContent = "▶ Play";
+}
+
+async function loadSong(token) {
+  const base = `out/${song.id}/`;
+  $("panel").hidden = false;
+  $("panel").classList.remove("error");
+  $("panelText").textContent = `Loading stems for “${song.title}”…`;
+  $("split").hidden = true;
+  $("panelBar").hidden = false;
+  $("log").hidden = true;
+  $("progress").style.width = "0";
+  try {
+    const d = await (await fetch(fresh(base + "analysis.json"), { cache: "no-store" })).json();
+    // panned-apart guitars replace the combined guitar stem
+    const names = ORDER.filter(s => s in d.stems && !(s === "guitar" && "guitar_L" in d.stems));
+    let done = 0;
+    const bufs = await Promise.all(names.map(async s => {
+      const b = await load(`${base}stems/${s}.wav`);
+      $("progress").style.width = `${(++done / names.length) * 100}%`;
+      return b;
+    }));
+    // optional string arrangement rendered by arrange_strings.py
+    let strNames = [], strBufs = [], smoothInfo = null, bassInfo = null, keysInfo = null;
+    try {
+      const sj = await (await fetch(fresh(base + "strings/strings.json"), { cache: "no-store" })).json();
+      strNames = sj.parts;
+      smoothInfo = sj.smooth || null;
+      bassInfo = sj.bass_smooth || null;
+      keysInfo = sj.keys_smooth || null;
+      const g = [smoothInfo, bassInfo, keysInfo];
+      const file = s => { const i = g.find(x => x?.parts.includes(s)); return i ? levelFile(s, i.variant, i.default) : s; };
+      strBufs = await Promise.all(strNames.map(s => load(`${base}strings/${file(s)}.wav`)));
+    } catch { strNames = []; strBufs = []; smoothInfo = bassInfo = keysInfo = null; }
+    if (token !== loadToken) return; // user picked another song meanwhile
+    data = d;
+    duration = Math.max(...bufs.map(b => b.duration));
+    buildLanes(names, bufs, strNames, strBufs);
+    smooth = smoothInfo && { info: smoothInfo, level: smoothInfo.default, last: smoothInfo.default, variant: smoothInfo.variant };
+    bassSmooth = bassInfo && { info: bassInfo, level: bassInfo.default, last: bassInfo.default };
+    keysSmooth = keysInfo && { info: keysInfo, level: keysInfo.default, last: keysInfo.default, variant: keysInfo.variant };
+    violinMode = violinModes()[0] || "line"; // start on whichever violin setup this song has
+  } catch (e) {
+    if (token !== loadToken) return;
+    $("panel").classList.add("error");
+    $("panelText").textContent = `Couldn't load the stems: ${e.message}`;
+    return;
+  }
+  $("key").textContent = data.key;
+  $("tempo").textContent = `~${Math.round(data.tempo)} BPM`;
+  $("metaKey").hidden = $("metaTempo").hidden = false;
+  $("arr").hidden = !tracks.some(t => t.group === "str");  $("smoothBox").hidden = !smooth;
+  $("bassSmoothBox").hidden = !bassSmooth;
+  if (bassSmooth) showBassSmooth();
+  $("keysSmoothBox").hidden = !keysSmooth;
+  if (keysSmooth) showKeysSmooth();
+  $("splitBtn").hidden = violinModes().length < 2;
+  if (smooth) showSmooth();
+  $("panel").hidden = true;
+  $("app").hidden = false;
+  showLoop();
+  draw();
+  mix();
+}
+
+function makeRow(label, color, cls) {
+  const row = document.createElement("div");
+  row.className = "row" + (cls ? " " + cls : "");
+  row.innerHTML = `<div class="ctrl"><span class="name"><span class="dot" style="background:${color}"></span>${label}</span></div><div class="wave"><canvas></canvas></div>`;
+  $("lanes").insertBefore(row, $("overlay"));
+  return row;
+}
+
+function buildLanes(names, bufs, strNames = [], strBufs = []) {
+  makeRow("time", "transparent", "ruler");
+  makeRow("chords", css("--accent"), "chords");
+  const all = [...names.map((s, i) => [s, bufs[i], "band"]), ...strNames.map((s, i) => [s, strBufs[i], "str"])];
+  all.forEach(([s, buf, group], i) => {
+    const color = css(`--${s}`);
+    const row = makeRow(labelOf(s), color);
+    const gain = ctx.createGain();
+    gain.connect(master);
+    const t = { name: s, buffer: buf, group, rank: RANK.test(s), gain, row, color, mute: false, solo: false, vol: 1, canvas: row.querySelector("canvas") };
+    if (group === "band" && data.stems[s] < 0.12) { row.classList.add("absent"); row.title = "Very quiet stem, probably bleed from other instruments"; }
+    const ctrl = row.querySelector(".ctrl");
+    const m = Object.assign(document.createElement("button"), { textContent: "M", title: "Mute" });
+    const so = Object.assign(document.createElement("button"), { textContent: "S", title: `Solo (${i + 1})` });
+    const v = Object.assign(document.createElement("input"), { type: "range", min: 0, max: 1.5, step: 0.01, value: 1 });
+    m.onclick = () => { t.mute = !t.mute; mix(); };
+    so.onclick = () => { t.solo = !t.solo; mix(); };
+    v.oninput = () => { t.vol = +v.value; mix(); };
+    ctrl.append(m, so, v);
+    Object.assign(t, { mBtn: m, sBtn: so });
+    tracks.push(t);
+  });
+  bindLanes();
+}
+
+// ---------- drawing ----------
+
+function peaks(buffer, n) {
+  const ch = [...Array(buffer.numberOfChannels)].map((_, i) => buffer.getChannelData(i));
+  const step = Math.floor(buffer.length / n), out = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    let m = 0;
+    for (let j = i * step, e = j + step; j < e; j += 16)
+      for (const c of ch) { const v = Math.abs(c[j]); if (v > m) m = v; }
+    out[i] = m;
+  }
+  return out;
+}
+
+function draw() {
+  if (!data) return;
+  for (const c of document.querySelectorAll(".lanes canvas")) { c.width = c.clientWidth * devicePixelRatio; c.height = c.clientHeight * devicePixelRatio; }
+  for (const t of tracks) {
+    const c = t.canvas, g = c.getContext("2d"), p = peaks(t.buffer, c.width), mid = c.height / 2;
+    const norm = Math.max(...p) || 1;
+    g.fillStyle = t.color;
+    for (let x = 0; x < p.length; x++) { const h = (p[x] / norm) * mid * 0.92; g.fillRect(x, mid - h, 1, h * 2 || 1); }
+  }
+  // time ruler: tick every 5s, label every 15s
+  {
+    const c = document.querySelector(".row.ruler canvas"), g = c.getContext("2d"), W = c.width, H = c.height, d = devicePixelRatio;
+    const step = duration > 600 ? 30 : 5, label = duration > 600 ? 60 : 15;
+    g.font = `${11 * d}px system-ui, sans-serif`;
+    g.textBaseline = "bottom";
+    for (let s = 0; s <= duration; s += step) {
+      const x = Math.round((s / duration) * W), major = s % label === 0;
+      g.fillStyle = major ? css("--dim") : css("--line");
+      g.fillRect(x, H - (major ? 9 : 5) * d, d, (major ? 9 : 5) * d);
+      if (major && s > 0) g.fillText(fmt(s), x + 3 * d, H - 8 * d);
+    }
+  }
+  // chord blocks: merge consecutive equal chords
+  const c = document.querySelector(".row.chords canvas"), g = c.getContext("2d"), W = c.width, H = c.height;
+  const blocks = [];
+  for (const ch of data.chords) {
+    const last = blocks[blocks.length - 1];
+    if (last && last.chord === ch.chord) last.t1 = ch.t1; else blocks.push({ ...ch });
+  }
+  g.font = `${12 * devicePixelRatio}px system-ui, sans-serif`;
+  g.textBaseline = "middle";
+  blocks.forEach((b, i) => {
+    const x0 = (b.t0 / duration) * W, x1 = (b.t1 / duration) * W;
+    g.fillStyle = i % 2 ? "rgba(242,181,68,.10)" : "rgba(242,181,68,.20)";
+    g.fillRect(x0, 0, x1 - x0 - 1, H);
+    const label = b.chord.split("/")[0];
+    if (g.measureText(label).width + 6 < x1 - x0) { g.fillStyle = css("--text"); g.fillText(label, x0 + 4, H / 2); }
+  });
+}
+
+// ---------- playback ----------
+
+// Only one violin treatment plays at a time (the V button); true when t belongs to another one.
+// A guitar without rank violins keeps its line in "per note" mode.
+function violinHidden(t) {
+  if (isSecBoth(t)) return violinMode !== "section";
+  if (isSecSide(t)) return violinMode !== "sections";
+  if (t.rank) return violinMode !== "ranks";
+  if (t.name === "violin" || t.name === "violin2") {
+    const side = t.name === "violin" ? "L" : "R";
+    return violinMode === "section" || violinMode === "sections" ||
+      (violinMode === "ranks" && tracks.some(x => x.rank && x.name[6] === side));
+  }
+  return false;
+}
+
+// Whether a track is heard right now; playback and the MP3 export both go by this.
+function trackOn(t, anySolo = tracks.some(x => x.solo)) {
+  // "Only violins" etc. work through the lanes' S buttons (syncPartSolo), so here they behave like Strings only
+  const inMode = t.group === "str" ? arrMode !== "band" : arrMode === "band" || arrMode === "layer";
+  return !useOriginal && !t.mute && (anySolo ? t.solo : inMode && !violinHidden(t));
+}
+
+function mix() {
+  const anySolo = tracks.some(t => t.solo);
+  for (const t of tracks) {
+    const on = trackOn(t, anySolo);
+    t.gain.gain.setTargetAtTime(on ? t.vol : 0, ctx.currentTime, 0.015);
+    t.row.classList.toggle("muted", !on);
+    t.mBtn.classList.toggle("on", t.mute);
+    t.sBtn.classList.toggle("on", t.solo);
+  }
+  if (original) original.gain.gain.setTargetAtTime(useOriginal ? 1 : 0, ctx.currentTime, 0.015);
+  $("splitBtn").textContent = VIOLIN_LABEL[violinMode];
+  $("splitBtn").classList.toggle("on", violinMode !== "line");
+  $("arr").textContent = ARR_LABEL[arrMode];
+  $("arr").classList.toggle("on", arrMode !== "band");
+  $("mode").textContent = useOriginal ? "Original file" : "Stems";
+  $("mode").classList.toggle("on", useOriginal);
+}
+
+const now = () => playing ? ctx.currentTime - startedAt : offset;
+const clamp = t => Math.max(0, Math.min(t, duration));
+
+function start(at) {
+  if (!data) return;
+  stopSources();
+  offset = clamp(at);
+  const when = ctx.currentTime + 0.03;
+  for (const t of original ? [...tracks, original] : tracks) {
+    const src = ctx.createBufferSource();
+    src.buffer = t.buffer;
+    src.connect(t.gain);
+    src.start(when, offset);
+    t.src = src;
+  }
+  startedAt = when - offset;
+  playing = true;
+  $("play").textContent = "❚❚ Pause";
+}
+
+function stopSources() {
+  for (const t of [...tracks, original].filter(Boolean)) { try { t.src?.stop(); } catch {} t.src = null; }
+}
+
+function pause() { offset = now(); stopSources(); playing = false; $("play").textContent = "▶ Play"; }
+function toggle() { if (!data) return; ctx.resume(); playing ? pause() : start(offset >= duration ? 0 : offset); }
+function seek(t) { playing ? start(t) : (offset = clamp(t)); }
+
+async function toggleOriginal() {
+  if (!original) {
+    $("mode").textContent = "Loading original…";
+    const token = loadToken;
+    try {
+      const buffer = await load(`/api/original?id=${encodeURIComponent(song.id)}`);
+      if (token !== loadToken) return;
+      const gain = ctx.createGain(); gain.gain.value = 0; gain.connect(master);
+      original = { buffer, gain };
+      if (playing) start(now());
+    } catch { $("mode").textContent = "No original found"; return; }
+  }
+  useOriginal = !useOriginal;
+  mix();
+}
+
+// The Band / strings button's steps: the three mixes, then one group at a time
+// (left / right violins only when the violins come in two sides).
+function arrModes() {
+  const sided = violinMode !== "section";
+  return [...ARR_MODES, "violins", ...(sided ? ["violinsL", "violinsR"] : []),
+          ...SINGLE_PARTS.filter(n => tracks.some(t => t.name === n))];
+}
+
+// "Only E" etc. solo the matching lanes, so their S buttons light up and show what's playing;
+// stepping back to one of the mixes clears those solos again.
+function syncPartSolo(was) {
+  if (!ARR_MODES.includes(arrMode)) {
+    for (const t of tracks) t.solo = stepWants(t, arrMode) && !violinHidden(t);
+  } else if (!ARR_MODES.includes(was)) {
+    for (const t of tracks) t.solo = false;
+  }
+}
+
+function cycleArr() {
+  if (!tracks.some(t => t.group === "str")) return;
+  const modes = arrModes(), was = arrMode;
+  arrMode = modes[(modes.indexOf(arrMode) + 1) % modes.length];
+  syncPartSolo(was);
+  useOriginal = false;
+  mix();
+}
+
+const TEXTURE_LABEL = { full: "full section", follow: "follow guitar" };
+
+function showSmooth() {
+  $("smooth").value = smooth.level;
+  $("smoothVal").textContent = smooth.level === 0 ? "raw" : smooth.level;
+  $("rawBtn").classList.toggle("on", smooth.level === 0);
+  $("textureBtn").hidden = !smooth.variant;
+  $("textureBtn").textContent = `Texture: ${TEXTURE_LABEL[smooth.variant] || smooth.variant}`;
+  $("textureBtn").classList.toggle("on", smooth.variant === "follow");
+}
+
+// The violins' texture: every part on every chord, or only as many as the guitar plays notes (pre-rendered variants).
+function cycleTexture() {
+  const v = smooth?.info.variants;
+  if (!v) return;
+  setGroupLevel(smooth, smooth.level, showSmooth, "smoothVal", v[(v.indexOf(smooth.variant) + 1) % v.length]);
+}
+
+function showBassSmooth() {
+  $("bassSmooth").value = bassSmooth.level;
+  $("bassSmoothVal").textContent = bassSmooth.level === 0 ? "raw" : bassSmooth.level;
+}
+
+function showKeysSmooth() {
+  $("keysSmooth").value = keysSmooth.level;
+  $("keysSmoothVal").textContent = keysSmooth.level;
+  $("keysRhythm").hidden = !keysSmooth.variant;
+  $("keysRhythm").textContent = `Rhythm: ${keysSmooth.variant}`;
+}
+
+// The keys' re-strikes follow the guitars, the drums or the bass: each is a pre-rendered variant.
+function cycleKeysRhythm() {
+  const v = keysSmooth?.info.variants;
+  if (!v) return;
+  setGroupLevel(keysSmooth, keysSmooth.level, showKeysSmooth, "keysSmoothVal", v[(v.indexOf(keysSmooth.variant) + 1) % v.length]);
+}
+
+// A group part's rendered file: <name>[_<variant>]_s<level>
+const levelFile = (name, variant, level) => `${name}${variant ? `_${variant}` : ""}_s${level}`;
+
+// Swap a group's parts (violins, cello + double bass, keys) to another pre-rendered smoothing level or variant,
+// keeping the position and play state.
+let smoothBusy = false;
+async function setGroupLevel(g, level, show, label, variant = g?.variant) {
+  if (!g) return;
+  if ((level === g.level && variant === g.variant) || smoothBusy) { show(); return; }
+  smoothBusy = true;
+  const token = loadToken, was = playing, at = now();
+  $(label).textContent = "…";
+  try {
+    const targets = tracks.filter(t => g.info.parts.includes(t.name));
+    const bufs = await Promise.all(targets.map(t => load(`out/${song.id}/strings/${levelFile(t.name, variant, level)}.wav`)));
+    if (token !== loadToken) return;
+    targets.forEach((t, i) => { t.buffer = bufs[i]; });
+    if (g.level > 0 && level !== g.level) g.last = g.level;
+    g.level = level;
+    g.variant = variant;
+    draw();
+    if (was) start(at);
+  } catch (e) {
+    console.error(e);
+  } finally {
+    smoothBusy = false;
+    if (g === smooth || g === bassSmooth || g === keysSmooth) show(); // not if another song was loaded meanwhile
+  }
+}
+
+const setSmooth = level => setGroupLevel(smooth, level, showSmooth, "smoothVal");
+const setBassSmooth = level => setGroupLevel(bassSmooth, level, showBassSmooth, "bassSmoothVal");
+const setKeysSmooth = level => setGroupLevel(keysSmooth, level, showKeysSmooth, "keysSmoothVal");
+
+function violinModes() {
+  return [...(tracks.some(t => t.name === "violin" || t.name === "violin2") ? ["line"] : []),
+          ...(tracks.some(t => t.rank) ? ["ranks"] : []), ...(tracks.some(isSecBoth) ? ["section"] : []),
+          ...(tracks.some(isSecSide) ? ["sections"] : [])];
+}
+
+function toggleSplit() {
+  const modes = violinModes();
+  if (modes.length < 2) return;
+  const was = arrMode;
+  violinMode = modes[(modes.indexOf(violinMode) + 1) % modes.length];
+  if (!arrModes().includes(arrMode)) arrMode = "only"; // "Only E" etc. has nothing to play outside the section modes
+  syncPartSolo(was); // re-point "Only E" at the new mode's lanes, or clear it
+  useOriginal = false;
+  mix();
+}
+
+// Flip between the raw (original) violin line and the last smoothing level you used.
+function toggleRaw() {
+  if (smooth) setSmooth(smooth.level === 0 ? smooth.last : 0);
+}
+
+// ---------- MP3 export ----------
+
+// The file a track is playing right now (smoothing groups play one of their pre-rendered levels).
+function fileOf(t) {
+  const dir = `out/${song.id}/`;
+  if (t.group === "band") return `${dir}stems/${t.name}.wav`;
+  const g = [smooth, bassSmooth, keysSmooth].find(x => x?.info.parts.includes(t.name));
+  return `${dir}strings/${g ? levelFile(t.name, g.variant, g.level) : t.name}.wav`;
+}
+
+// The server mixes the audible tracks at their volumes with ffmpeg, keeps the MP3 in out/<song>/exports
+// and the browser downloads it.
+async function exportMp3() {
+  if (!data) return;
+  const btn = $("exportBtn"), anySolo = tracks.some(t => t.solo);
+  const parts = useOriginal ? [] : tracks.filter(t => t.vol > 0 && trackOn(t, anySolo)).map(t => ({ path: fileOf(t), gain: t.vol }));
+  const reset = (text, ms) => { btn.textContent = text; setTimeout(() => { btn.textContent = "⬇ MP3"; }, ms); };
+  if (!useOriginal && !parts.length) return reset("Nothing playing", 1500);
+  const label = useOriginal ? "original"
+    : [ARR_LABEL[arrMode], smooth && `violins ${smooth.level}${smooth.variant ? ` ${smooth.variant}` : ""}`,
+       bassSmooth && `bass ${bassSmooth.level}`,
+       keysSmooth && `keys ${keysSmooth.level}${keysSmooth.variant ? ` ${keysSmooth.variant}` : ""}`].filter(Boolean).join(", ");
+  btn.disabled = true;
+  btn.textContent = "Exporting…";
+  try {
+    const res = await fetch("/api/export", { method: "POST", headers: { "Content-Type": "application/json" },
+                                              body: JSON.stringify({ id: song.id, original: useOriginal, parts, label }) });
+    const out = await res.json();
+    if (!res.ok) throw new Error(out.error || res.status);
+    const a = Object.assign(document.createElement("a"), { href: out.url, download: out.name });
+    document.body.append(a);
+    a.click();
+    a.remove();
+    btn.title = `Last export also saved to ${out.path}`;
+    reset("Saved ✓", 2500);
+  } catch (e) {
+    console.error(e);
+    reset("Export failed", 3000);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// ---------- loop & scrub ----------
+
+function setLoop(a, b, on = true) {
+  loop = a != null && b != null && Math.abs(b - a) > 0.2 ? { a: Math.min(a, b), b: Math.max(a, b) } : null;
+  loopOn = !!loop && on;
+  showLoop();
+}
+
+function showLoop() {
+  const el = $("loop");
+  el.style.display = loop ? "block" : "none";
+  el.classList.toggle("off", !loopOn);
+  $("loopBtn").classList.toggle("on", loopOn);
+  if (loop) { el.style.left = `${(loop.a / duration) * 100}%`; el.style.width = `${((loop.b - loop.a) / duration) * 100}%`; }
+}
+
+// The bar (4 beats) containing t, from the beat tracker; falls back to 2s around t.
+function barAt(t) {
+  const beats = data.beats;
+  const i = beats.findIndex((b, k) => k % 4 === 0 && t >= b && t < (beats[k + 4] ?? Infinity));
+  return i >= 0 && beats[i + 4] ? [beats[i], beats[i + 4]] : [Math.max(0, t - 1), Math.min(duration, t + 1)];
+}
+
+function toggleLoop() {
+  if (!data) return;
+  if (!loop) { const [a, b] = barAt(now()); setLoop(a, b); if (playing) start(a); else offset = a; return; }
+  loopOn = !loopOn;
+  showLoop();
+}
+
+function rewind() { seek(loopOn && loop ? loop.a : 0); }
+
+// Scrub: play short enveloped grains of every audible track at the drag position.
+let lastGrain = 0;
+function grain(t) {
+  if (ctx.currentTime - lastGrain < 0.05) return;
+  lastGrain = ctx.currentTime;
+  const when = ctx.currentTime, len = 0.09;
+  for (const tr of useOriginal && original ? [original] : tracks) {
+    const src = ctx.createBufferSource(), env = ctx.createGain();
+    src.buffer = tr.buffer;
+    env.gain.setValueAtTime(0, when);
+    env.gain.linearRampToValueAtTime(1, when + 0.01);
+    env.gain.setValueAtTime(1, when + len - 0.02);
+    env.gain.linearRampToValueAtTime(0, when + len);
+    src.connect(env).connect(tr.gain);
+    src.start(when, Math.max(0, Math.min(t, duration - len)), len);
+  }
+}
+
+const timeAt = (e, el) => { const r = el.getBoundingClientRect(); return clamp(((e.clientX - r.left) / r.width) * duration); };
+
+// Chord lane (or shift-drag anywhere): drag selects a loop, click seeks.
+// Ruler and waveform lanes: click seeks, drag scrubs with audio preview.
+function bindLanes() {
+  let drag = null;
+  for (const c of document.querySelectorAll(".lanes canvas")) {
+    const isChordLane = !!c.closest(".row.chords");
+    c.onpointerdown = e => {
+      ctx.resume();
+      try { c.setPointerCapture(e.pointerId); } catch {}
+      const t = timeAt(e, c);
+      drag = { el: c, a: t, x: e.clientX, kind: isChordLane || e.shiftKey ? "loop" : "scrub", wasPlaying: playing, moved: false };
+      if (drag.kind === "scrub") { if (playing) pause(); offset = t; }
+    };
+    c.onpointermove = e => {
+      if (!drag || drag.el !== c) return;
+      if (Math.abs(e.clientX - drag.x) > 3) drag.moved = true;
+      const t = timeAt(e, c);
+      if (drag.kind === "loop") { if (drag.moved) setLoop(drag.a, t); }
+      else if (drag.moved) { offset = t; grain(t); }
+    };
+    c.onpointerup = e => {
+      if (!drag || drag.el !== c) return;
+      const t = timeAt(e, c), d = drag;
+      drag = null;
+      if (d.kind === "loop" && d.moved) { setLoop(d.a, t); seek(loop ? loop.a : t); }
+      else if (d.kind === "loop") seek(t);
+      else { offset = t; if (d.wasPlaying) start(t); }
+    };
+    c.onpointercancel = () => { drag = null; };
+  }
+}
+
+// ---------- per-frame readout ----------
+
+function chordAt(t) {
+  const i = data.chords.findIndex(c => t >= c.t0 && t < c.t1);
+  if (i < 0) return ["–", "–"];
+  const cur = data.chords[i].chord;
+  const nxt = data.chords.slice(i + 1).find(c => c.chord !== cur);
+  return [cur, nxt ? nxt.chord : "–"];
+}
+
+function bassAt(t) {
+  const n = (data.notes.bass || []).filter(([a, b]) => t >= a && t < b).sort((x, y) => x[2] - y[2])[0];
+  return n ? `${NOTE[n[2] % 12]}${Math.floor(n[2] / 12) - 1}` : "–";
+}
+
+let lastShown = "";
+function tick() {
+  requestAnimationFrame(tick);
+  if (!data) return;
+  let t = now();
+  if (playing && loopOn && loop && t >= loop.b) { start(loop.a); t = loop.a; }
+  if (playing && t >= duration) { pause(); offset = duration; t = duration; }
+  $("playhead").style.left = `${(t / duration) * 100}%`;
+  $("time").textContent = `${fmt(t)} / ${fmt(duration)}`;
+  const [c, n] = chordAt(t), b = bassAt(t), key = c + n + b;
+  if (key !== lastShown) { $("chord").textContent = c; $("next").textContent = n; $("bassnote").textContent = b; lastShown = key; }
+}
+
+// ---------- controls bound once ----------
+
+function bindUI() {
+  $("song").onchange = e => choose(e.target.value);
+  $("split").onclick = startSplit;
+  $("previewOrig").onclick = togglePreview;
+  $("play").onclick = toggle;
+  $("mode").onclick = toggleOriginal;
+  $("arr").onclick = cycleArr;
+  $("exportBtn").onclick = exportMp3;
+  $("smooth").oninput = e => { $("smoothVal").textContent = +e.target.value === 0 ? "raw" : e.target.value; };
+  $("smooth").onchange = e => setSmooth(+e.target.value);
+  $("bassSmooth").oninput = e => { $("bassSmoothVal").textContent = +e.target.value === 0 ? "raw" : e.target.value; };
+  $("bassSmooth").onchange = e => setBassSmooth(+e.target.value);
+  $("keysSmooth").oninput = e => { $("keysSmoothVal").textContent = e.target.value; };
+  $("keysSmooth").onchange = e => setKeysSmooth(+e.target.value);
+  $("keysRhythm").onclick = cycleKeysRhythm;
+  $("textureBtn").onclick = cycleTexture;
+  $("rawBtn").onclick = toggleRaw;
+  $("splitBtn").onclick = toggleSplit;
+  $("rewind").onclick = rewind;
+  $("back").onclick = () => seek(now() - 5);
+  $("fwd").onclick = () => seek(now() + 5);
+  $("loopBtn").onclick = toggleLoop;
+  $("loopA").onclick = () => setLoop(now(), loop && loop.b > now() ? loop.b : Math.min(duration, now() + 4));
+  $("loopB").onclick = () => setLoop(loop && loop.a < now() ? loop.a : Math.max(0, now() - 4), now());
+  $("loopClear").onclick = () => setLoop(null, null);
+
+  // Playhead handle: pull it to move through the song, previewing audio as it goes.
+  const h = $("handle"), lane = $("overlay");
+  let hold = null;
+  h.onpointerdown = e => {
+    e.preventDefault();
+    ctx.resume();
+    try { h.setPointerCapture(e.pointerId); } catch {}
+    hold = { wasPlaying: playing };
+    if (playing) pause();
+    h.classList.add("dragging");
+  };
+  h.onpointermove = e => { if (hold) { offset = timeAt(e, lane); grain(offset); } };
+  h.onpointerup = h.onpointercancel = e => {
+    if (!hold) return;
+    offset = timeAt(e, lane);
+    if (hold.wasPlaying) start(offset);
+    hold = null;
+    h.classList.remove("dragging");
+  };
+
+  addEventListener("keydown", e => {
+    if (!data || e.target.tagName === "SELECT" || (e.target.tagName === "INPUT" && e.key !== " ")) return;
+    if (e.key === " ") { e.preventDefault(); toggle(); }
+    else if (e.key === "ArrowLeft") seek(now() - 5);
+    else if (e.key === "ArrowRight") seek(now() + 5);
+    else if (e.key === "Home") rewind();
+    else if (e.key.toLowerCase() === "l") toggleLoop();
+    else if (e.key === "[") $("loopA").click();
+    else if (e.key === "]") $("loopB").click();
+    else if (e.key.toLowerCase() === "o") toggleOriginal();
+    else if (e.key.toLowerCase() === "a") cycleArr();
+    else if (e.key.toLowerCase() === "r") toggleRaw();
+    else if (e.key.toLowerCase() === "v") toggleSplit();
+    else if (/^[1-9]$/.test(e.key) && tracks[+e.key - 1]) { const t = tracks[+e.key - 1]; t.solo = !t.solo; mix(); }
+  });
+
+  let rz;
+  addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(draw, 150); });
+}
+
+(async () => {
+  bindUI();
+  requestAnimationFrame(tick);
+  try { await refreshSongs(); } catch { $("song").innerHTML = "<option>Server not running</option>"; return; }
+  fillPicker();
+  const want = new URLSearchParams(location.search).get("song");
+  const first = songs.find(s => s.id === want) || songs.find(s => s.status === "done") || songs[0];
+  if (first) choose(first.id);
+})();
+</script>
+</body>
+</html>
