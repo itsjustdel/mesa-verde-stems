@@ -41,6 +41,7 @@ Run in order with the song id from the player's URL (`?song=<id>`):
 | `violin_section.py <id> guitar_L` / `guitar_R` | an E/A/D/G violin section per guitar: textures full / follow, smoothing 0-4, arpeggios in quiet picked passages |
 | `bass_lines.py <id>` | cello + double bass at smoothing 0-4 |
 | `piano_layer.py <id>` | keys: chords on the kick (or guitar / drums / bass), smoothing 0-4 |
+| `percussion_layer.py <id>` | tuned percussion (marimba / steel drums / kalimba) from the drum hits on the chords, busyness 0-4 |
 | `rank_violins.py <id> guitar_L` | optional: one violin per note rank (not used by default) |
 
 Everything is pre-rendered; the player's sliders and buttons swap between the rendered files live.

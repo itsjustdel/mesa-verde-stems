@@ -9,7 +9,7 @@
     --bg: #111317; --panel: #1a1d23; --line: #2a2e36; --text: #e6e8ec; --dim: #8a909c;
     --accent: #f2b544; --play: #ffffff; --err: #e66a5a;
     --bass: #5aa9e6; --drums: #e66a5a; --guitar: #f2b544; --guitar_L: #f2b544; --guitar_R: #f28c44; --violin: #ff7aa8; --viola: #d96cff; --violin2: #d96cff; --violinL1: #ff9bbd; --violinL2: #ff7aa8; --violinL3: #e65c8f; --violinL4: #d94c80; --violinL5: #bf3f73; --violinL6: #a53566; --violinR1: #e08cff; --violinR2: #d96cff; --violinR3: #b84fe0; --violinR4: #a043cc; --violinR5: #8a38b3; --violinR6: #742e99; --secE: #ffd37a; --secA: #ffb36b; --secD: #ff9466; --secG: #e67a5c;
-    --secLE: #fff09a; --secLA: #f5dd73; --secLD: #e6c75c; --secLG: #ccae4a; --secRE: #9af0d8; --secRA: #73dcc0; --secRD: #5cc4a8; --secRG: #4aab90; --cello: #66e0ff; --contrabass: #4f8cff; --keys: #f0e6d8; --vocals: #b48cf0; --piano: #5ad1a4; --other: #9aa3b0;
+    --secLE: #fff09a; --secLA: #f5dd73; --secLD: #e6c75c; --secLG: #ccae4a; --secRE: #9af0d8; --secRA: #73dcc0; --secRD: #5cc4a8; --secRG: #4aab90; --cello: #66e0ff; --contrabass: #4f8cff; --keys: #f0e6d8; --perc: #8fe36b; --vocals: #b48cf0; --piano: #5ad1a4; --other: #9aa3b0;
   }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.4 system-ui, Segoe UI, sans-serif; }
@@ -130,6 +130,12 @@
       <b id="keysSmoothVal">2</b>
       <button id="keysRhythm" title="What the keys' re-strikes follow: the guitars, the drums or the bass guitar" hidden>Rhythm: guitar</button>
     </span>
+    <span id="percSmoothBox" class="smooth" hidden title="How busy the tuned percussion is: 0 every drum hit plus offbeats, 1 kick + snare + offbeats, 2 kick + offbeats, 3 kick + snare, 4 kick only.">
+      Perc
+      <input type="range" id="percSmooth" min="0" max="4" step="1" value="1" aria-label="Percussion busyness">
+      <b id="percSmoothVal">1</b>
+      <button id="percInst" title="Which tuned percussion plays the drum part" hidden>marimba</button>
+    </span>
     <button id="exportBtn" title="Save what you're hearing (the whole song, with your mutes, solos, volumes and smoothing) as an MP3">⬇ MP3</button>
   </div>
   <div class="hint">Pull the handle or drag waveforms to scrub · drag chord lane to set loop · Space play · L loop · number keys solo · O original</div>
@@ -146,15 +152,15 @@
 <script>
 const ORDER = ["vocals", "guitar", "guitar_L", "guitar_R", "bass", "drums", "piano", "other"];
 const LABEL = { guitar_L: "Guitar L", guitar_R: "Guitar R", violin: "Violin L", violin2: "Violin R", contrabass: "Dbl bass",
-                secE: "Section E", secA: "Section A", secD: "Section D", secG: "Section G", keys: "Keys" };
+                secE: "Section E", secA: "Section A", secD: "Section D", secG: "Section G", keys: "Keys", perc: "Percussion" };
 const RANK = /^violin([LR])(\d)$/; // violinL1..3 / violinR1..3: one guitar split into violins by note rank
 const labelOf = s => LABEL[s] || (RANK.test(s) ? s.replace(RANK, (_, side, n) => `Violin ${side}${n}`)
   : /^sec[LR][EADG]$/.test(s) ? `Section ${s[3]} ${s[4]}` : s);
 const ARR_MODES =["band", "layer", "only"];
-const ARR_LABEL = { band: "Band", layer: "Band + strings & keys", only: "Strings & keys only",
+const ARR_LABEL = { band: "Band", layer: "Band + arrangement", only: "Arrangement only",
                     violins: "Only violins", violinsL: "Only left violins", violinsR: "Only right violins",
-                    cello: "Only cello", contrabass: "Only bass", keys: "Only keys" };
-const SINGLE_PARTS = ["keys", "cello", "contrabass"]; // "Only …" steps that are one lane each
+                    cello: "Only cello", contrabass: "Only bass", keys: "Only keys", perc: "Only percussion" };
+const SINGLE_PARTS = ["keys", "perc", "cello", "contrabass"]; // "Only …" steps that are one lane each
 const NOTE = ["C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"];
 const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const fmt = t => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, "0")}`;
@@ -172,6 +178,7 @@ let previewEl = null;
 let smooth = null; // {info, level, last}: which pre-rendered violin smoothing level is loaded
 let bassSmooth = null; // the same for the cello and double bass
 let keysSmooth = null; // and for the keys
+let percSmooth = null; // and for the tuned percussion
 let violinMode = "line"; // line: one violin per guitar · ranks: one violin per note rank · section: 4-part violin section
 // The "Only …" steps work on whole groups: every violin part (an E/A/D/G section stays together),
 // one guitar's violins, the keys, the cello or the double bass.
@@ -289,7 +296,8 @@ function teardown() {
   $("smoothBox").hidden = true;
   $("bassSmoothBox").hidden = true;
   $("keysSmoothBox").hidden = true;
-  bassSmooth = keysSmooth = null;
+  $("percSmoothBox").hidden = true;
+  bassSmooth = keysSmooth = percSmooth = null;
   $("splitBtn").hidden = true;
   smooth = null; violinMode = "line";  for (const t of tracks) t.gain.disconnect();
   original?.gain.disconnect();
@@ -321,17 +329,18 @@ async function loadSong(token) {
       return b;
     }));
     // optional string arrangement rendered by arrange_strings.py
-    let strNames = [], strBufs = [], smoothInfo = null, bassInfo = null, keysInfo = null;
+    let strNames = [], strBufs = [], smoothInfo = null, bassInfo = null, keysInfo = null, percInfo = null;
     try {
       const sj = await (await fetch(fresh(base + "strings/strings.json"), { cache: "no-store" })).json();
       strNames = sj.parts;
       smoothInfo = sj.smooth || null;
       bassInfo = sj.bass_smooth || null;
       keysInfo = sj.keys_smooth || null;
-      const g = [smoothInfo, bassInfo, keysInfo];
+      percInfo = sj.perc_smooth || null;
+      const g = [smoothInfo, bassInfo, keysInfo, percInfo];
       const file = s => { const i = g.find(x => x?.parts.includes(s)); return i ? levelFile(s, i.variant, i.default) : s; };
       strBufs = await Promise.all(strNames.map(s => load(`${base}strings/${file(s)}.wav`)));
-    } catch { strNames = []; strBufs = []; smoothInfo = bassInfo = keysInfo = null; }
+    } catch { strNames = []; strBufs = []; smoothInfo = bassInfo = keysInfo = percInfo = null; }
     if (token !== loadToken) return; // user picked another song meanwhile
     data = d;
     duration = Math.max(...bufs.map(b => b.duration));
@@ -339,6 +348,7 @@ async function loadSong(token) {
     smooth = smoothInfo && { info: smoothInfo, level: smoothInfo.default, last: smoothInfo.default, variant: smoothInfo.variant };
     bassSmooth = bassInfo && { info: bassInfo, level: bassInfo.default, last: bassInfo.default };
     keysSmooth = keysInfo && { info: keysInfo, level: keysInfo.default, last: keysInfo.default, variant: keysInfo.variant };
+    percSmooth = percInfo && { info: percInfo, level: percInfo.default, last: percInfo.default, variant: percInfo.variant };
     violinMode = violinModes()[0] || "line"; // start on whichever violin setup this song has
   } catch (e) {
     if (token !== loadToken) return;
@@ -354,6 +364,8 @@ async function loadSong(token) {
   if (bassSmooth) showBassSmooth();
   $("keysSmoothBox").hidden = !keysSmooth;
   if (keysSmooth) showKeysSmooth();
+  $("percSmoothBox").hidden = !percSmooth;
+  if (percSmooth) showPercSmooth();
   $("splitBtn").hidden = violinModes().length < 2;
   if (smooth) showSmooth();
   $("panel").hidden = true;
@@ -599,6 +611,20 @@ function cycleKeysRhythm() {
   setGroupLevel(keysSmooth, keysSmooth.level, showKeysSmooth, "keysSmoothVal", v[(v.indexOf(keysSmooth.variant) + 1) % v.length]);
 }
 
+function showPercSmooth() {
+  $("percSmooth").value = percSmooth.level;
+  $("percSmoothVal").textContent = percSmooth.level;
+  $("percInst").hidden = !percSmooth.variant;
+  $("percInst").textContent = { steel: "steel drums" }[percSmooth.variant] || percSmooth.variant;
+}
+
+// The tuned percussion's instrument: marimba, steel drums or kalimba (pre-rendered variants).
+function cyclePercInst() {
+  const v = percSmooth?.info.variants;
+  if (!v) return;
+  setGroupLevel(percSmooth, percSmooth.level, showPercSmooth, "percSmoothVal", v[(v.indexOf(percSmooth.variant) + 1) % v.length]);
+}
+
 // A group part's rendered file: <name>[_<variant>]_s<level>
 const levelFile = (name, variant, level) => `${name}${variant ? `_${variant}` : ""}_s${level}`;
 
@@ -625,13 +651,14 @@ async function setGroupLevel(g, level, show, label, variant = g?.variant) {
     console.error(e);
   } finally {
     smoothBusy = false;
-    if (g === smooth || g === bassSmooth || g === keysSmooth) show(); // not if another song was loaded meanwhile
+    if ([smooth, bassSmooth, keysSmooth, percSmooth].includes(g)) show(); // not if another song was loaded meanwhile
   }
 }
 
 const setSmooth = level => setGroupLevel(smooth, level, showSmooth, "smoothVal");
 const setBassSmooth = level => setGroupLevel(bassSmooth, level, showBassSmooth, "bassSmoothVal");
 const setKeysSmooth = level => setGroupLevel(keysSmooth, level, showKeysSmooth, "keysSmoothVal");
+const setPercSmooth = level => setGroupLevel(percSmooth, level, showPercSmooth, "percSmoothVal");
 
 function violinModes() {
   return [...(tracks.some(t => t.name === "violin" || t.name === "violin2") ? ["line"] : []),
@@ -661,7 +688,7 @@ function toggleRaw() {
 function fileOf(t) {
   const dir = `out/${song.id}/`;
   if (t.group === "band") return `${dir}stems/${t.name}.wav`;
-  const g = [smooth, bassSmooth, keysSmooth].find(x => x?.info.parts.includes(t.name));
+  const g = [smooth, bassSmooth, keysSmooth, percSmooth].find(x => x?.info.parts.includes(t.name));
   return `${dir}strings/${g ? levelFile(t.name, g.variant, g.level) : t.name}.wav`;
 }
 
@@ -676,7 +703,8 @@ async function exportMp3() {
   const label = useOriginal ? "original"
     : [ARR_LABEL[arrMode], smooth && `violins ${smooth.level}${smooth.variant ? ` ${smooth.variant}` : ""}`,
        bassSmooth && `bass ${bassSmooth.level}`,
-       keysSmooth && `keys ${keysSmooth.level}${keysSmooth.variant ? ` ${keysSmooth.variant}` : ""}`].filter(Boolean).join(", ");
+       keysSmooth && `keys ${keysSmooth.level}${keysSmooth.variant ? ` ${keysSmooth.variant}` : ""}`,
+       percSmooth && `perc ${percSmooth.level}${percSmooth.variant ? ` ${percSmooth.variant}` : ""}`].filter(Boolean).join(", ");
   btn.disabled = true;
   btn.textContent = "Exporting…";
   try {
@@ -827,6 +855,9 @@ function bindUI() {
   $("keysSmooth").oninput = e => { $("keysSmoothVal").textContent = e.target.value; };
   $("keysSmooth").onchange = e => setKeysSmooth(+e.target.value);
   $("keysRhythm").onclick = cycleKeysRhythm;
+  $("percSmooth").oninput = e => { $("percSmoothVal").textContent = e.target.value; };
+  $("percSmooth").onchange = e => setPercSmooth(+e.target.value);
+  $("percInst").onclick = cyclePercInst;
   $("textureBtn").onclick = cycleTexture;
   $("rawBtn").onclick = toggleRaw;
   $("splitBtn").onclick = toggleSplit;
