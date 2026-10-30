@@ -75,6 +75,31 @@ def split_guitar(stems, threshold=0.8, sharpness=8.0):
     return corr
 
 
+def drop_cross_bleed(stems, left, right, margin_db=1.0):
+    """The L/R guitar split leaves some of each guitar in the other's stem, and the transcription picks those notes
+    up. For every note, compare how loud its pitch is in its own stem and in the other guitar's stem over its first
+    quarter second; a note more than `margin_db` louder in the other stem is bleed and is dropped. Notes about as
+    loud in both (both guitars playing them) are kept."""
+    import librosa
+    sr, hop, lo, n_bins = 22050, 256, 40, 72  # CQT bins line up with MIDI notes from E2 (40) up
+    cqt = {}
+    for side in ("guitar_L", "guitar_R"):
+        y, _ = librosa.load(str(stems / f"{side}.wav"), sr=sr, mono=True)
+        cqt[side] = np.abs(librosa.cqt(y, sr=sr, hop_length=hop, fmin=librosa.midi_to_hz(lo), n_bins=n_bins,
+                                       bins_per_octave=12))
+
+    def level(side, s, e, p):
+        a = int(s * sr / hop)
+        return float(cqt[side][p - lo, a:max(int(min(e, s + 0.25) * sr / hop), a + 1)].mean()) + 1e-9
+
+    kept = {}
+    for own, other, notes in (("guitar_L", "guitar_R", left), ("guitar_R", "guitar_L", right)):
+        kept[own] = [n for n in notes if not lo <= n[2] < lo + n_bins
+                     or 20 * np.log10(level(own, n[0], n[1], n[2]) / level(other, n[0], n[1], n[2])) >= -margin_db]
+        print(f"{own}: dropped {len(notes) - len(kept[own])} of {len(notes)} notes as bleed from the other guitar")
+    return kept["guitar_L"], kept["guitar_R"]
+
+
 def transcribe(stems, out):
     from basic_pitch.inference import predict
     midi_dir = out / "midi"
@@ -166,6 +191,8 @@ def main():
         stems = separate(audio, out)
     guitar_corr = split_guitar(stems)
     notes = transcribe(stems, out)
+    if "guitar_L" in notes and "guitar_R" in notes:
+        notes["guitar_L"], notes["guitar_R"] = drop_cross_bleed(stems, notes["guitar_L"], notes["guitar_R"])
     rms = stem_energy(stems)
     tempo, beat_times = beats(audio)
 
