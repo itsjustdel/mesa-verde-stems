@@ -42,6 +42,15 @@
   .now .label { color: var(--dim); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; }
   .now .bass { font-size: 24px; font-weight: 600; color: var(--bass); }
 
+  .tabview { margin: 0 20px 20px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+  .tabhead { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+  .tabhead .hint { padding: 0; margin-left: auto; }
+  .tabbody { position: relative; max-height: 300px; overflow: auto; padding: 8px 12px;
+             font: 13px/1.3 ui-monospace, Consolas, "Cascadia Mono", monospace; white-space: pre; }
+  .tabrow { margin-bottom: 10px; }
+  .tabrow .tm { color: var(--dim); font-size: 11px; }
+  .tabbody span { cursor: pointer; }
+  .tabbody span.playing { background: var(--accent); color: #111; border-radius: 2px; }
   .lanes { position: relative; margin: 0 20px 20px; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--panel); }
   .row { display: grid; grid-template-columns: 210px minmax(0, 1fr); border-top: 1px solid var(--line); height: 64px; overflow: hidden; }
   .row:first-child { border-top: 0; }
@@ -137,6 +146,7 @@
       <button id="percInst" title="Which tuned percussion plays the drum part" hidden>marimba</button>
     </span>
     <button id="exportBtn" title="Save what you're hearing (the whole song, with your mutes, solos, volumes and smoothing) as an MP3">⬇ MP3</button>
+    <button id="tabBtn" title="Show the bass and guitar tabs, following the song (T)" hidden>Tab</button>
   </div>
   <div class="hint" id="arrBanner" hidden></div>
   <div class="hint">Pull the handle or drag waveforms to scrub · drag chord lane to set loop · Space play · L loop · number keys solo · O original</div>
@@ -144,6 +154,10 @@
     <div><div class="label">Chord</div><div class="chord" id="chord">–</div></div>
     <div><div class="label">Next</div><div class="next" id="next">–</div></div>
     <div><div class="label">Bass note</div><div class="bass" id="bassnote">–</div></div>
+  </div>
+  <div class="tabview" id="tabView" hidden>
+    <div class="tabhead"><span id="tabParts"></span><span class="hint">click a note to jump there</span></div>
+    <div class="tabbody" id="tabBody"></div>
   </div>
   <div class="lanes" id="lanes">
     <div id="overlay"><div id="loop"></div><div id="playhead"><div id="handle" title="Drag to move through the song"></div></div></div>
@@ -180,6 +194,8 @@ let smooth = null; // {info, level, last}: which pre-rendered violin smoothing l
 let bassSmooth = null; // the same for the cello and double bass
 let keysSmooth = null; // and for the keys
 let percSmooth = null; // and for the tuned percussion
+let tabs = {}, tabName = null, tabCells = {}, tabNow = null, tabRow = null; // tabs.py's tabs and the view's state
+const TAB_LABEL = { bass: "Bass", guitar_L: "Guitar L", guitar_R: "Guitar R", guitar: "Guitar" };
 let violinMode = "line"; // line: one violin per guitar · ranks: one violin per note rank · section: 4-part violin section
 // The "Only …" steps work on whole groups: every violin part (an E/A/D/G section stays together),
 // one guitar's violins, the keys, the cello or the double bass.
@@ -299,6 +315,9 @@ function teardown() {
   $("keysSmoothBox").hidden = true;
   $("percSmoothBox").hidden = true;
   $("arrBanner").hidden = true;
+  tabs = {}; tabName = tabNow = tabRow = null; tabCells = {};
+  $("tabBody").innerHTML = $("tabParts").innerHTML = "";
+  $("tabView").hidden = $("tabBtn").hidden = true;
   bassSmooth = keysSmooth = percSmooth = null;
   $("splitBtn").hidden = true;
   smooth = null; violinMode = "line";  for (const t of tracks) t.gain.disconnect();
@@ -352,6 +371,7 @@ async function loadSong(token) {
     keysSmooth = keysInfo && { info: keysInfo, level: keysInfo.default, last: keysInfo.default, variant: keysInfo.variant };
     percSmooth = percInfo && { info: percInfo, level: percInfo.default, last: percInfo.default, variant: percInfo.variant };
     violinMode = violinModes()[0] || "line"; // start on whichever violin setup this song has
+    await loadTabs(base, token);
   } catch (e) {
     if (token !== loadToken) return;
     $("panel").classList.add("error");
@@ -854,6 +874,90 @@ function bassAt(t) {
   return n ? `${NOTE[n[2] % 12]}${Math.floor(n[2] / 12) - 1}` : "–";
 }
 
+// ---------- tab view ----------
+
+// tabs.py's tabs for this song, if it made any (bass, and one per guitar)
+async function loadTabs(base, token) {
+  const found = await Promise.all(Object.keys(TAB_LABEL).map(async name => {
+    try {
+      const res = await fetch(fresh(`${base}tabs/${name}.json`), { cache: "no-store" });
+      return res.ok ? [name, await res.json()] : null;
+    } catch { return null; }
+  }));
+  if (token !== loadToken) return;
+  tabs = Object.fromEntries(found.filter(Boolean));
+  $("tabBtn").hidden = !Object.keys(tabs).length;
+  $("tabParts").innerHTML = "";
+  for (const name of Object.keys(tabs)) {
+    const b = Object.assign(document.createElement("button"), { textContent: TAB_LABEL[name] });
+    b.dataset.part = name;
+    b.onclick = () => showTab(name);
+    $("tabParts").append(b);
+  }
+}
+
+function toggleTabView() {
+  if (!Object.keys(tabs).length) return;
+  $("tabView").hidden = !$("tabView").hidden;
+  $("tabBtn").classList.toggle("on", !$("tabView").hidden);
+  if (!$("tabView").hidden && !tabName) showTab("bass" in tabs ? "bass" : Object.keys(tabs)[0]);
+}
+
+// Draw one part's tab like the text file (two bars a row, high string on top), one span per slot and string so
+// the slot being played can be lit up; every span knows its time, so clicking one jumps there.
+function showTab(name) {
+  const tab = tabs[name], body = $("tabBody");
+  tabName = name; tabCells = {}; tabNow = tabRow = null;
+  for (const b of $("tabParts").children) b.classList.toggle("on", b.dataset.part === name);
+  body.innerHTML = "";
+  const frag = document.createDocumentFragment();
+  for (let b0 = 0; b0 < tab.bars.length; b0 += 2) {
+    const row = document.createElement("div");
+    row.className = "tabrow";
+    row.append(Object.assign(document.createElement("div"), { className: "tm", textContent: `${fmt(Math.max(0, tab.bars[b0].t))}   bar ${b0 + 1}` }));
+    for (let s = tab.strings.length - 1; s >= 0; s--) {
+      const line = document.createElement("div");
+      line.append(`${tab.strings[s]}|`);
+      for (let b = b0; b < Math.min(b0 + 2, tab.bars.length); b++) {
+        for (let k = 0; k < tab.bars[b].slots.length; k++) {
+          const f = tab.bars[b].frets[k][s];
+          const cell = document.createElement("span");
+          cell.textContent = f == null ? "---" : String(f).padEnd(3, "-");
+          cell.dataset.t = tab.bars[b].slots[k];
+          (tabCells[`${b}-${k}`] ||= []).push(cell);
+          line.append(cell);
+        }
+        line.append("|");
+      }
+      row.append(line);
+    }
+    frag.append(row);
+  }
+  body.append(frag);
+  tabTick(now(), true);
+}
+
+// Light up the slot being played and keep its row in view.
+function tabTick(t, force = false) {
+  if (!tabName || $("tabView").hidden) return;
+  const bars = tabs[tabName].bars;
+  let lo = 0, hi = bars.length - 1;
+  while (lo < hi) { const m = (lo + hi + 1) >> 1; if (bars[m].t <= t) lo = m; else hi = m - 1; }
+  const slots = bars[lo].slots;
+  let k = 0;
+  while (k + 1 < slots.length && slots[k + 1] <= t) k++;
+  const key = `${lo}-${k}`;
+  if (key === tabNow && !force) return;
+  for (const c of tabCells[tabNow] || []) c.classList.remove("playing");
+  for (const c of tabCells[key] || []) c.classList.add("playing");
+  tabNow = key;
+  const row = tabCells[key]?.[0]?.closest(".tabrow");
+  if (row && (row !== tabRow || force)) {
+    tabRow = row;
+    $("tabBody").scrollTop = Math.max(0, row.offsetTop - 8);
+  }
+}
+
 let lastShown = "";
 function tick() {
   requestAnimationFrame(tick);
@@ -865,6 +969,7 @@ function tick() {
   $("time").textContent = `${fmt(t)} / ${fmt(duration)}`;
   const [c, n] = chordAt(t), b = bassAt(t), key = c + n + b;
   if (key !== lastShown) { $("chord").textContent = c; $("next").textContent = n; $("bassnote").textContent = b; lastShown = key; }
+  tabTick(t);
 }
 
 // ---------- controls bound once ----------
@@ -877,6 +982,8 @@ function bindUI() {
   $("mode").onclick = toggleOriginal;
   $("arr").onclick = cycleArr;
   $("exportBtn").onclick = exportMp3;
+  $("tabBtn").onclick = toggleTabView;
+  $("tabBody").onclick = e => { if (e.target.dataset?.t) { ctx.resume(); seek(+e.target.dataset.t); } };
   $("smooth").oninput = e => { $("smoothVal").textContent = +e.target.value === 0 ? "raw" : e.target.value; };
   $("smooth").onchange = e => setSmooth(+e.target.value);
   $("bassSmooth").oninput = e => { $("bassSmoothVal").textContent = +e.target.value === 0 ? "raw" : e.target.value; };
@@ -931,6 +1038,7 @@ function bindUI() {
     else if (e.key.toLowerCase() === "a") cycleArr();
     else if (e.key.toLowerCase() === "r") toggleRaw();
     else if (e.key.toLowerCase() === "v") toggleSplit();
+    else if (e.key.toLowerCase() === "t") toggleTabView();
     else if (/^[1-9]$/.test(e.key) && tracks[+e.key - 1]) { const t = tracks[+e.key - 1]; t.solo = !t.solo; mix(); }
   });
 

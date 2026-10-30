@@ -2,7 +2,7 @@
 
 Usage: python tabs.py <song_id>
 Needs the output of analyze.py and export_midi.py. Writes out/<song_id>/tabs/{bass,guitar_L,guitar_R}.txt
-(or guitar.txt when the guitars weren't split).
+(or guitar.txt when the guitars weren't split), plus the same as .json for the player's tab view.
 
   Notes   bass: the pYIN line from the song's MIDI (one note at a time), with octave slips (a note far above the
           line around it) moved down an octave. Guitars: Basic Pitch notes, cleaned up:
@@ -150,7 +150,8 @@ def layout(hits, kind, beats, title):
         beat = min(3, max(0, int(np.searchsorted(bars[b], t, side="right")) - 1))
         frac = (t - bars[b][beat]) / max(1e-6, bars[b][beat + 1] - bars[b][beat])
         slot = min(SLOTS - 1, beat * 4 + int(round(frac * 4)))
-        while slot < SLOTS and any(grid[b][slot]):  # a fast note lands on a taken slot: push it right
+        # a fast note lands on a taken slot (frets are 0 for open strings, so test for "is not None"): push it right
+        while slot < SLOTS and any(f is not None for f in grid[b][slot]):
             slot += 1
             moved += 1
         if slot == SLOTS:
@@ -162,7 +163,7 @@ def layout(hits, kind, beats, title):
 
     lines = [f"{title}", f"{kind} tab, standard tuning ({' '.join(names.upper() if kind == 'bass' else 'E A D G B E'.split())})",
              f"{placed} hits placed, {moved} nudged right to fit, {dropped} dropped. 4 beats a bar, 16 slots a bar.", ""]
-    last_bar = max((i for i, g in enumerate(grid) if any(any(c) for c in g)), default=-1)
+    last_bar = max((i for i, g in enumerate(grid) if any(f is not None for c in g for f in c)), default=-1)
     for b0 in range(0, last_bar + 1, BARS_PER_LINE):
         t0 = starts[b0]
         lines.append(f"{int(max(0, t0) // 60)}:{max(0, t0) % 60:04.1f}  (bar {b0 + 1})")
@@ -172,7 +173,13 @@ def layout(hits, kind, beats, title):
                 row += "".join(f"{grid[b][k][s]:-<3}" if grid[b][k][s] is not None else "---" for k in range(SLOTS)) + "|"
             lines.append(row)
         lines.append("")
-    return "\n".join(lines), placed, moved, dropped
+    # the same tab as data for the player: each bar's start, the time of each of its slots, and the frets
+    # (one entry per string, low string first, null where nothing is played)
+    tab = {"title": title, "kind": kind, "strings": list(names),
+           "bars": [{"t": bars[b][0],
+                     "slots": [bars[b][k // 4] + (k % 4) / 4 * (bars[b][k // 4 + 1] - bars[b][k // 4]) for k in range(SLOTS)],
+                     "frets": grid[b]} for b in range(last_bar + 1)]}
+    return "\n".join(lines), tab, placed, moved, dropped
 
 
 def main():
@@ -188,8 +195,9 @@ def main():
         if side in data["notes"] and not (side == "guitar" and "guitar_L" in data["notes"]):
             parts[side] = ("guitar", data["notes"][side])
     for name, (kind, notes) in parts.items():
-        text, placed, moved, dropped = layout(hits_from(notes, kind), kind, data["beats"], f"{title}: {name}")
+        text, tab, placed, moved, dropped = layout(hits_from(notes, kind), kind, data["beats"], f"{title}: {name}")
         (out / f"{name}.txt").write_text(text, encoding="utf-8")
+        json.dump(tab, open(out / f"{name}.json", "w"))
         print(f"{name}: {placed} hits, {moved} nudged, {dropped} dropped -> {out / (name + '.txt')}")
 
 
