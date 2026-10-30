@@ -8,7 +8,8 @@ API
   GET  /api/original?id=    the untouched source file
   POST /api/split?id=<id>   copy the song to in/<id><ext>, run analyze.py on it, then build_arrangement.py
                             (one job at a time; the stems are playable while the arrangement builds)
-  POST /api/arrange?id=     build the arrangement for a song split before that happened automatically
+  POST /api/arrange?id=[&layers=violins,bass,keys,perc|all]
+                            build arrangement layers for a split song (default: build_arrangement's defaults)
   POST /api/export          {id, parts: [{path, gain}], label} or {id, original: true}: an MP3 of the mix,
                             kept in out/<id>/exports
 """
@@ -89,13 +90,14 @@ def run_split(s):
             jobs[sid] = {"state": "error", "log": repr(e)}
 
 
-def run_arrange(s):
-    """Build the arrangement for a song that was split before this happened automatically."""
+def run_arrange(s, layers=()):
+    """Build arrangement layers for a split song (build_arrangement.py's default ones unless `layers` names some)."""
     sid = s["id"]
     with queue_lock:
         jobs[sid] = {"state": "arranging", "log": ""}
         try:
-            jobs[sid]["state"] = "done" if run_step(sid, ["build_arrangement.py", sid]) else "arrange_error"
+            ok = run_step(sid, ["build_arrangement.py", sid, *layers])
+            jobs[sid]["state"] = "done" if ok else "arrange_error"
         except Exception as e:
             jobs[sid] = {"state": "arrange_error", "log": repr(e)}
 
@@ -193,13 +195,17 @@ class Handler(SimpleHTTPRequestHandler):
             threading.Thread(target=run_split, args=(s,), daemon=True).start()
             return self.send_json({"status": "queued"})
         if url.path == "/api/arrange":
-            s = scan().get(parse_qs(url.query).get("id", [""])[0])
+            q = parse_qs(url.query)
+            s = scan().get(q.get("id", [""])[0])
             if not s or status(s) != "done":
                 return self.send_json({"error": "song not split"}, 404)
+            layers = [x for x in q.get("layers", [""])[0].split(",") if x]
+            if any(x not in ("violins", "bass", "keys", "perc", "all") for x in layers):
+                return self.send_json({"error": "layers are violins, bass, keys, perc or all"}, 400)
             if jobs.get(s["id"], {}).get("state") in ("queued", "running", "arranging", "arrange_queued"):
                 return self.send_json({"status": "arranging"})
             jobs[s["id"]] = {"state": "arrange_queued", "log": ""}
-            threading.Thread(target=run_arrange, args=(s,), daemon=True).start()
+            threading.Thread(target=run_arrange, args=(s, layers), daemon=True).start()
             return self.send_json({"status": "arranging"})
         if url.path == "/api/export":
             try:

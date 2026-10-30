@@ -386,7 +386,7 @@ async function followArrangement(token) {
   if (!song.arranging && !song.arrange_failed) await fetch(`/api/arrange?id=${encodeURIComponent(song.id)}`, { method: "POST" });
   banner.hidden = false;
   banner.textContent = song.arrange_failed ? "Building the arrangement failed; the server log says why."
-    : "Building the percussion in the background… it loads here when it's ready (several minutes for a long song).";
+    : "Building the arrangement in the background… it loads here when it's ready (several minutes for a long song).";
   if (song.arrange_failed) return;
   while (token === loadToken) {
     await new Promise(r => setTimeout(r, 15000));
