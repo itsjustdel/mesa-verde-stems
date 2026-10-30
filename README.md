@@ -33,7 +33,7 @@ Open http://127.0.0.1:8765/player.html, pick a song from the Music folder and pr
 ## Building the arrangement for a split song
 
 This happens automatically: after a split the server runs `build_arrangement.py`, which builds the layers in
-its `DEFAULT_LAYERS` (currently just the tuned percussion), and the player loads them when they're ready. Opening
+its `DEFAULT_LAYERS` (currently the tuned percussion and the tabs), and the player loads them when they're ready. Opening
 a song that was split earlier starts its build too. For more layers:
 
 ```bash
@@ -49,6 +49,7 @@ The steps it runs, with the song id from the player's URL (`?song=<id>`):
 | `violin_section.py <id> guitar_L` / `guitar_R` | an E/A/D/G violin section per guitar: textures full / follow, smoothing 0-4, arpeggios in quiet picked passages |
 | `bass_lines.py <id>` | cello + double bass at smoothing 0-4 |
 | `piano_layer.py <id>` | keys: chords on the kick (or guitar / drums / bass), smoothing 0-4 |
+| `tabs.py <id>` | text tabs (standard tuning) for the bass and each guitar, in `out/<id>/tabs/` |
 | `percussion_layer.py <id>` | tuned percussion (marimba / steel drums / kalimba) from the drum hits on the chords, busyness 0-4 |
 | `rank_violins.py <id> guitar_L` | optional: one violin per note rank (not used by default) |
 

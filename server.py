@@ -200,8 +200,8 @@ class Handler(SimpleHTTPRequestHandler):
             if not s or status(s) != "done":
                 return self.send_json({"error": "song not split"}, 404)
             layers = [x for x in q.get("layers", [""])[0].split(",") if x]
-            if any(x not in ("violins", "bass", "keys", "perc", "all") for x in layers):
-                return self.send_json({"error": "layers are violins, bass, keys, perc or all"}, 400)
+            if any(x not in ("violins", "bass", "keys", "perc", "tabs", "all") for x in layers):
+                return self.send_json({"error": "layers are violins, bass, keys, perc, tabs or all"}, 400)
             if jobs.get(s["id"], {}).get("state") in ("queued", "running", "arranging", "arrange_queued"):
                 return self.send_json({"status": "arranging"})
             jobs[s["id"]] = {"state": "arrange_queued", "log": ""}

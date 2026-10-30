@@ -2,7 +2,7 @@
 
 Usage: python build_arrangement.py <song_id> [layer ...]
   layers: perc (tuned percussion), violins (an E/A/D/G section per guitar), bass (cello + double bass), keys,
-  or all. Default: DEFAULT_LAYERS. The MIDI step (bass line for the chord roots) always runs first.
+  tabs (text tabs for the bass and guitars), or all. Default: DEFAULT_LAYERS. The MIDI step (bass line for the chord roots) always runs first.
 Runs after analyze.py (the server starts it automatically after every split). Songs whose guitars weren't split
 into L/R get one violin section from the combined guitar. Stops at the first step that fails.
 """
@@ -12,8 +12,8 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
-LAYERS = ("violins", "bass", "keys", "perc")
-DEFAULT_LAYERS = ("perc",)  # what a split builds on its own; ask for more by name
+LAYERS = ("violins", "bass", "keys", "perc", "tabs")
+DEFAULT_LAYERS = ("perc", "tabs")  # what a split builds on its own; ask for more by name
 
 
 def main():
@@ -37,6 +37,8 @@ def main():
         steps.append(["piano_layer.py", sid])
     if "perc" in wanted:
         steps.append(["percussion_layer.py", sid])
+    if "tabs" in wanted:
+        steps.append(["tabs.py", sid])
     for step in steps:
         print(f"== {step[0]} {' '.join(step[2:])}", flush=True)
         if subprocess.run([sys.executable, *step], cwd=ROOT).returncode:
