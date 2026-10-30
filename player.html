@@ -453,7 +453,9 @@ function draw() {
   if (!data) return;
   for (const c of document.querySelectorAll(".lanes canvas")) { c.width = c.clientWidth * devicePixelRatio; c.height = c.clientHeight * devicePixelRatio; }
   for (const t of tracks) {
-    const c = t.canvas, g = c.getContext("2d"), p = peaks(t.buffer, c.width), mid = c.height / 2;
+    // draw each lane to its real length: rendered parts end with their last note, so they're shorter than the song
+    const c = t.canvas, g = c.getContext("2d"), mid = c.height / 2;
+    const p = peaks(t.buffer, Math.max(1, Math.round(c.width * Math.min(1, t.buffer.duration / duration))));
     const norm = Math.max(...p) || 1;
     g.fillStyle = t.color;
     for (let x = 0; x < p.length; x++) { const h = (p[x] / norm) * mid * 0.92; g.fillRect(x, mid - h, 1, h * 2 || 1); }
