@@ -6,9 +6,10 @@ Needs the output of analyze.py and export_midi.py. Writes out/<song_id>/tabs/{ba
 
   Notes   bass: the pYIN line from the song's MIDI (one note at a time), with octave slips (a note far above the
           line around it) moved down an octave. Guitars: Basic Pitch notes, cleaned up:
-          notes starting together are one hit; overtones (repeats of a note an octave or more up) and blips are
-          dropped, a hit keeps at most four notes, and stray high hits (over an octave above what the guitar plays
-          around them) are dropped.
+          notes starting together are one hit, and so is a note an octave from the last hit just after it (the
+          two halves of a strummed octave chord); the lowest note's octave is kept, but further repeats of it
+          (overtones) and blips are dropped, a hit keeps at most four notes, and stray high hits (over an octave
+          above what the guitar plays around them) are dropped.
   Frets   standard tuning (bass E A D G, guitar E A D G B E). Each hit gets the playable string/fret positions
           that stay closest to where the hand already is, preferring low frets and open strings. Notes below the
           lowest string are taken as octave mistakes and moved up an octave.
@@ -29,6 +30,7 @@ STRING_NAMES = {"bass": "EADG", "guitar": "EADGBe"}
 MAX_FRET, SPAN = 20, 4  # highest fret used; widest stretch between fretted notes of one hit
 SLOTS, BARS_PER_LINE = 16, 2
 ONSET_GROUP = 0.04  # notes starting this close together are one hit
+OCTAVE_GROUP = 0.15  # a note an octave from the last hit, this soon after it, is that hit's other half (a strummed octave chord)
 BASS_TOP = 60  # C4: bass "notes" above this are harmonics or bleed
 REST = 1.0  # after a gap this long the hand may start again from the low end of the neck
 
@@ -44,8 +46,9 @@ def hits_from(notes, kind):
             continue
         while p < lo:
             p += 12
-        if hits and s - hits[-1][0] < ONSET_GROUP and kind == "guitar":
-            hits[-1][1].append(p)
+        if kind == "guitar" and hits and (s - hits[-1][0] < ONSET_GROUP or
+                                          (s - hits[-1][0] < OCTAVE_GROUP and any(abs(p - q) == 12 for q in hits[-1][1]))):
+            hits[-1][1].append(p)  # played together, or the second half of a strummed octave chord
         else:
             hits.append((s, [p]))
     out = []
@@ -53,8 +56,9 @@ def hits_from(notes, kind):
         ps = sorted(set(ps))
         if kind == "guitar":
             base = ps[0]
-            # overtones: the same note name again above the lowest note, or anything far above it
-            ps = [p for p in ps if p == base or ((p - base) % 12 != 0 and p - base <= 19)][:4]
+            # keep the lowest note and its octave (octave chords); drop further repeats of that note name
+            # (overtones) and anything far above
+            ps = [p for p in ps if p in (base, base + 12) or ((p - base) % 12 != 0 and p - base <= 19)][:4]
         out.append((t, ps[:1] if kind == "bass" else ps))
     if kind == "guitar":
         out = drop_strays(out)
