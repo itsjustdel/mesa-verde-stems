@@ -149,8 +149,11 @@ class Handler(SimpleHTTPRequestHandler):
         self.wfile.write(body)
 
     def end_headers(self):
-        # stems get regenerated under the same names; never let the browser reuse an old copy
-        if not self.path.startswith("/api/"):
+        # stems get regenerated under the same names; never let the browser reuse an old copy. The player page
+        # itself is never stored at all, so back/forward and reopening can't bring back an out-of-date player.
+        if urlparse(self.path).path.endswith(".html"):
+            self.send_header("Cache-Control", "no-store")
+        elif not self.path.startswith("/api/"):
             self.send_header("Cache-Control", "no-cache")
         super().end_headers()
 
