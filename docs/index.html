@@ -1,0 +1,446 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Mesa Verde Stems</title>
+<style>
+  :root {
+    --bg: #f4f1ea; --panel: #fffdf8; --ink: #24211c; --muted: #6f685d; --line: #ddd5c6;
+    --accent: #a4532a; --accent-ink: #fff; --wave: #b9ad98; --wave-on: #a4532a; --mute: #c9c1b2; --solo: #d9a21b;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #171512; --panel: #211e1a; --ink: #ece6dc; --muted: #a0978a; --line: #36312a;
+      --accent: #e0814f; --accent-ink: #171512; --wave: #5a5246; --wave-on: #e0814f; --mute: #4a443b; --solo: #e6b43a;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 860px; margin: 0 auto; padding: 20px 16px 60px; }
+  header { display: flex; gap: 14px; align-items: center; margin-bottom: 18px; }
+  header img { width: 64px; height: 64px; border-radius: 6px; object-fit: cover; }
+  h1 { font-size: 20px; margin: 0; }
+  header p { margin: 2px 0 0; color: var(--muted); font-size: 13px; }
+  button { font: inherit; color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 6px;
+           padding: 6px 11px; cursor: pointer; }
+  button:hover { border-color: var(--muted); }
+  button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  button:disabled { opacity: .5; cursor: default; }
+  .songs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 18px; }
+  .songs button.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px; }
+  .empty { color: var(--muted); text-align: center; padding: 30px 10px; }
+  .transport { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .transport .time { font-variant-numeric: tabular-nums; color: var(--muted); margin-left: auto; }
+  #play { min-width: 76px; }
+  .seek { position: relative; height: 26px; margin: 4px 0 14px; cursor: pointer; touch-action: none; }
+  .seek .track { position: absolute; top: 11px; left: 0; right: 0; height: 4px; border-radius: 2px; background: var(--line); }
+  .seek .fill { position: absolute; top: 11px; left: 0; height: 4px; border-radius: 2px; background: var(--accent); }
+  .seek .loop { position: absolute; top: 6px; height: 14px; background: var(--solo); opacity: .3; border-radius: 3px; }
+  .seek .knob { position: absolute; top: 5px; width: 16px; height: 16px; margin-left: -8px; border-radius: 50%; background: var(--accent); }
+  .lane { display: grid; grid-template-columns: 112px auto minmax(0, 1fr) 128px; gap: 8px; align-items: center;
+          padding: 6px 0; border-top: 1px solid var(--line); }
+  .lane .name { font-weight: 600; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .lane .ms { display: flex; gap: 4px; }
+  .lane .ms button { width: 30px; padding: 4px 0; font-size: 12px; font-weight: 700; }
+  .lane .ms button.m.on { background: var(--mute); }
+  .lane .ms button.s.on { background: var(--solo); color: #000; border-color: var(--solo); }
+  .lane canvas { width: 100%; height: 34px; display: block; cursor: pointer; }
+  .lane .vol { display: flex; align-items: center; gap: 6px; }
+  .lane .vol input { width: 88px; accent-color: var(--accent); }
+  .lane .vol span { font-size: 12px; color: var(--muted); width: 34px; text-align: right; font-variant-numeric: tabular-nums; }
+  .lane.silent .name, .lane.silent canvas { opacity: .35; }
+  .presets { display: flex; flex-wrap: wrap; gap: 6px; margin: 14px 0 4px; align-items: center; }
+  .presets .label { color: var(--muted); font-size: 13px; margin-right: 4px; }
+  .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; align-items: center; }
+  .status { color: var(--muted); font-size: 13px; }
+  details { margin-top: 12px; font-size: 14px; }
+  details a { color: var(--accent); margin-right: 12px; }
+  .help { color: var(--muted); font-size: 13px; margin-top: 20px; }
+  @media (max-width: 600px) {
+    .lane { grid-template-columns: 1fr auto; grid-template-areas: "name ms" "wave wave" "vol vol"; }
+    .lane .name { grid-area: name; } .lane .ms { grid-area: ms; } .lane canvas { grid-area: wave; } .lane .vol { grid-area: vol; }
+    .lane .vol input { flex: 1; width: auto; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <img src="cover.jpg" alt="" onerror="this.remove()">
+    <div>
+      <h1>Mesa Verde stems</h1>
+      <p>Pick a song, set your own mix, download it as an MP3.</p>
+    </div>
+  </header>
+  <div class="songs" id="songs"></div>
+  <div class="panel" id="player"><div class="empty">Pick a song above.</div></div>
+  <p class="help">Space plays / pauses. Click a waveform or the bar to jump. Shift-drag on the bar to loop a section.
+    Your levels are remembered per song in this browser; "Copy link" shares them.</p>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lamejs/1.2.1/lame.min.js"></script>
+<script>
+"use strict";
+const $ = (sel, el = document) => el.querySelector(sel);
+const fmt = t => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, "0")}`;
+const store = {
+  get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+};
+
+let songs = [], song = null, ctx = null, master = null;
+let lanes = [];            // {stem, buffer, gain, vol, muted, solo, el, canvas, peaks}
+let sources = [], playing = false, startedAt = 0, offset = 0, loop = null, loadToken = 0;
+
+function duration() { return lanes.length ? Math.max(...lanes.map(l => l.buffer.duration)) : 0; }
+function position() { return playing ? offset + (ctx.currentTime - startedAt) : offset; }
+function audible(l) { const anySolo = lanes.some(x => x.solo); return !l.muted && (!anySolo || l.solo); }
+
+function ensureCtx() {
+  if (ctx) return;
+  ctx = new (window.AudioContext || window.webkitAudioContext)();
+  // a gentle limiter so boosted stems can't clip the speakers
+  master = ctx.createDynamicsCompressor();
+  master.threshold.value = -1; master.knee.value = 0; master.ratio.value = 20;
+  master.attack.value = 0.003; master.release.value = 0.15;
+  master.connect(ctx.destination);
+}
+
+async function init() {
+  songs = await (await fetch("songs.json", { cache: "no-cache" })).json();
+  const box = $("#songs");
+  for (const s of songs) {
+    const b = document.createElement("button");
+    b.textContent = `${s.track ? String(s.track).padStart(2, "0") + " " : ""}${s.title}`;
+    b.dataset.id = s.id;
+    b.onclick = () => openSong(s.id);
+    box.append(b);
+  }
+  const h = parseHash();
+  if (h.song && songs.some(s => s.id === h.song)) openSong(h.song, h.mix);
+  else if (songs.length === 1) openSong(songs[0].id);
+}
+
+function parseHash() {
+  const p = new URLSearchParams(location.hash.slice(1));
+  const mix = {};
+  for (const part of (p.get("mix") || "").split(",").filter(Boolean)) {
+    const [id, v, flags = ""] = part.split(":");
+    mix[id] = { vol: Math.min(150, Math.max(0, +v || 0)), muted: flags.includes("m"), solo: flags.includes("s") };
+  }
+  return { song: p.get("song"), mix: p.has("mix") ? mix : null };
+}
+
+function mixState() {
+  const o = {};
+  for (const l of lanes) o[l.stem.id] = { vol: l.vol, muted: l.muted, solo: l.solo };
+  return o;
+}
+
+function saveMix() {
+  if (!song) return;
+  store.set("mix:" + song.id, mixState());
+  history.replaceState(null, "", "#song=" + encodeURIComponent(song.id));
+}
+
+function shareLink() {
+  const mix = lanes.map(l => `${l.stem.id}:${l.vol}${l.muted || l.solo ? ":" + (l.muted ? "m" : "") + (l.solo ? "s" : "") : ""}`).join(",");
+  return `${location.origin}${location.pathname}#song=${encodeURIComponent(song.id)}&mix=${mix}`;
+}
+
+async function openSong(id, sharedMix = null) {
+  stop(); ensureCtx();
+  const token = ++loadToken;
+  song = songs.find(s => s.id === id);
+  for (const b of document.querySelectorAll("#songs button")) b.classList.toggle("on", b.dataset.id === id);
+  history.replaceState(null, "", "#song=" + encodeURIComponent(id));
+  const panel = $("#player");
+  panel.innerHTML = `<div class="empty">Loading ${song.title}… <span id="loadpct">0</span> of ${song.stems.length} stems</div>`;
+  lanes = []; offset = 0; loop = null;
+  let done = 0;
+  try {
+    const buffers = await Promise.all(song.stems.map(async st => {
+      const data = await (await fetch(st.file)).arrayBuffer();
+      const buf = await ctx.decodeAudioData(data);
+      if (token === loadToken) { const el = $("#loadpct"); if (el) el.textContent = ++done; }
+      return buf;
+    }));
+    if (token !== loadToken) return;  // another song was picked meanwhile
+    const saved = sharedMix || store.get("mix:" + id) || {};
+    lanes = song.stems.map((stem, i) => {
+      const s = saved[stem.id] || {};
+      const gain = ctx.createGain();
+      gain.connect(master);
+      return { stem, buffer: buffers[i], gain, vol: s.vol ?? 100, muted: !!s.muted, solo: !!s.solo, peaks: peaks(buffers[i]) };
+    });
+    if (sharedMix) saveMix();
+    render();
+  } catch (e) {
+    if (token === loadToken) panel.innerHTML = `<div class="empty">Couldn't load this song (${e.message}).</div>`;
+  }
+}
+
+function peaks(buf, n = 1200) {
+  const a = buf.getChannelData(0), b = buf.numberOfChannels > 1 ? buf.getChannelData(1) : a;
+  const step = Math.floor(a.length / n), out = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    let m = 0;
+    for (let j = i * step, e = j + step; j < e; j += 16) m = Math.max(m, Math.abs(a[j]), Math.abs(b[j]));
+    out[i] = m;
+  }
+  return out;
+}
+
+function render() {
+  const panel = $("#player");
+  const groups = [["drums"], ["bass"], ["guitar", "guitar_L", "guitar_R"], ["vocals"]]
+    .map(g => g.filter(id => lanes.some(l => l.stem.id === id))).filter(g => g.length);
+  const groupName = g => g[0].startsWith("guitar") ? "guitars" : g[0];
+  panel.innerHTML = `
+    <div class="transport">
+      <button id="play" class="primary">▶ Play</button>
+      <button id="back" title="Back 10 s">−10s</button>
+      <button id="fwd" title="Forward 10 s">+10s</button>
+      <button id="clearloop" hidden>✕ Loop</button>
+      <span class="time" id="time">0:00 / ${fmt(duration())}</span>
+    </div>
+    <div class="seek" id="seek"><div class="track"></div><div class="loop" id="loopbar" hidden></div>
+      <div class="fill" id="fill"></div><div class="knob" id="knob"></div></div>
+    <div id="lanes"></div>
+    <div class="presets"><span class="label">Quick mixes:</span>
+      <button data-preset="all">Everything</button>
+      ${groups.map(g => `<button data-preset="no:${g.join("+")}">No ${groupName(g)}</button>`).join("")}
+      ${groups.map(g => `<button data-preset="only:${g.join("+")}">Only ${groupName(g)}</button>`).join("")}
+    </div>
+    <div class="actions">
+      <button id="download" class="primary">⬇ Download this mix (MP3)</button>
+      <button id="copy">Copy link to this mix</button>
+      <span class="status" id="status"></span>
+    </div>
+    <details><summary>Download single stems</summary>
+      <p>${song.stems.map(s => `<a href="${s.file}" download="${song.title} - ${s.name}.mp3">${s.name}</a>`).join("")}</p>
+    </details>`;
+  const box = $("#lanes");
+  for (const l of lanes) {
+    const el = document.createElement("div");
+    el.className = "lane";
+    el.innerHTML = `<div class="name" title="${l.stem.name}">${l.stem.name}</div>
+      <div class="ms"><button class="m" title="Mute">M</button><button class="s" title="Solo">S</button></div>
+      <canvas></canvas>
+      <div class="vol"><input type="range" min="0" max="150" step="1" value="${l.vol}" aria-label="${l.stem.name} volume"><span></span></div>`;
+    l.el = el; l.canvas = $("canvas", el);
+    $(".m", el).onclick = () => { l.muted = !l.muted; applyGains(); };
+    $(".s", el).onclick = () => { l.solo = !l.solo; applyGains(); };
+    const range = $("input", el);
+    range.oninput = () => { l.vol = +range.value; applyGains(); };
+    range.ondblclick = () => { l.vol = 100; range.value = 100; applyGains(); };
+    l.canvas.onclick = e => { const r = l.canvas.getBoundingClientRect(); seek((e.clientX - r.left) / r.width * duration()); };
+    box.append(el);
+  }
+  $("#play").onclick = toggle;
+  $("#back").onclick = () => seek(position() - 10);
+  $("#fwd").onclick = () => seek(position() + 10);
+  $("#clearloop").onclick = () => { loop = null; drawLoop(); };
+  $("#download").onclick = downloadMix;
+  $("#copy").onclick = async () => {
+    try { await navigator.clipboard.writeText(shareLink()); status("Link copied."); }
+    catch { prompt("Copy this link:", shareLink()); }
+  };
+  for (const b of panel.querySelectorAll("[data-preset]")) b.onclick = () => preset(b.dataset.preset);
+  seekBar();
+  applyGains();
+  drawWaves();
+}
+
+function preset(p) {
+  const [kind, ids = ""] = p.split(":");
+  const set = new Set(ids.split("+"));
+  for (const l of lanes) {
+    l.solo = false;
+    l.muted = kind === "no" ? set.has(l.stem.id) : kind === "only" ? !set.has(l.stem.id) : false;
+    if (kind === "all") l.vol = 100;
+  }
+  applyGains();
+}
+
+function applyGains() {
+  for (const l of lanes) {
+    const on = audible(l);
+    l.gain.gain.setTargetAtTime(on ? l.vol / 100 : 0, ctx.currentTime, 0.015);
+    if (l.el) {
+      $(".m", l.el).classList.toggle("on", l.muted);
+      $(".s", l.el).classList.toggle("on", l.solo);
+      $("input", l.el).value = l.vol;
+      $(".vol span", l.el).textContent = l.vol + "%";
+      l.el.classList.toggle("silent", !on);
+    }
+  }
+  saveMix();
+}
+
+function drawWaves() {
+  const pos = position() / (duration() || 1);
+  const css = getComputedStyle(document.documentElement);
+  const off = css.getPropertyValue("--wave"), on = css.getPropertyValue("--wave-on");
+  for (const l of lanes) {
+    const c = l.canvas, dpr = window.devicePixelRatio || 1;
+    const w = Math.max(1, Math.round(c.clientWidth * dpr)), h = Math.round(34 * dpr);
+    if (c.width !== w || c.height !== h) { c.width = w; c.height = h; }
+    const g = c.getContext("2d");
+    g.clearRect(0, 0, w, h);
+    const frac = l.buffer.duration / duration(), n = l.peaks.length;
+    for (let x = 0; x < w * frac; x++) {
+      const v = l.peaks[Math.min(n - 1, Math.floor(x / (w * frac) * n))];
+      const bar = Math.max(1, v * h * 0.95);
+      g.fillStyle = x / w < pos ? on : off;
+      g.fillRect(x, (h - bar) / 2, 1, bar);
+    }
+  }
+}
+
+function start(at) {
+  const t0 = ctx.currentTime + 0.05;
+  sources = lanes.map(l => {
+    const src = ctx.createBufferSource();
+    src.buffer = l.buffer;
+    src.connect(l.gain);
+    if (at < l.buffer.duration) src.start(t0, at);
+    return src;
+  });
+  startedAt = t0; offset = at; playing = true;
+}
+
+function stopSources() {
+  for (const s of sources) { try { s.stop(); } catch {} s.disconnect(); }
+  sources = [];
+}
+
+function stop() { if (playing) offset = position(); stopSources(); playing = false; updatePlay(); }
+function toggle() {
+  if (!lanes.length) return;
+  if (playing) return stop();
+  ctx.resume();
+  if (offset >= duration() - 0.05) offset = loop ? loop[0] : 0;
+  start(offset); updatePlay();
+}
+function seek(t) {
+  t = Math.min(Math.max(0, t), duration());
+  if (playing) { stopSources(); start(t); } else offset = t;
+  tick(true);
+}
+function updatePlay() { const b = $("#play"); if (b) b.textContent = playing ? "❚❚ Pause" : "▶ Play"; }
+
+function seekBar() {
+  const bar = $("#seek");
+  let drag = null;
+  const at = e => { const r = bar.getBoundingClientRect(); return Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)) * duration(); };
+  bar.onpointerdown = e => {
+    bar.setPointerCapture(e.pointerId);
+    drag = { loop: e.shiftKey, from: at(e) };
+    if (!drag.loop) seek(drag.from);
+  };
+  bar.onpointermove = e => {
+    if (!drag) return;
+    if (drag.loop) { const t = at(e); loop = [Math.min(drag.from, t), Math.max(drag.from, t)]; drawLoop(); }
+    else seek(at(e));
+  };
+  bar.onpointerup = () => {
+    if (drag && drag.loop) {
+      if (loop && loop[1] - loop[0] > 0.5) seek(loop[0]); else loop = null;
+      drawLoop();
+    }
+    drag = null;
+  };
+}
+
+function drawLoop() {
+  const el = $("#loopbar"), btn = $("#clearloop");
+  if (!el) return;
+  el.hidden = btn.hidden = !loop;
+  if (loop) { el.style.left = loop[0] / duration() * 100 + "%"; el.style.width = (loop[1] - loop[0]) / duration() * 100 + "%"; }
+}
+
+let lastDraw = 0;
+function tick(force = false) {
+  if (lanes.length && $("#time")) {
+    let p = position();
+    if (playing && loop && p >= loop[1]) { seek(loop[0]); p = loop[0]; }
+    if (playing && p >= duration()) { stop(); offset = duration(); p = offset; }
+    const f = p / (duration() || 1) * 100;
+    $("#fill").style.width = f + "%"; $("#knob").style.left = f + "%";
+    $("#time").textContent = `${fmt(p)} / ${fmt(duration())}`;
+    const now = performance.now();
+    if (force || now - lastDraw > 250) { drawWaves(); lastDraw = now; }
+  }
+  if (!force) requestAnimationFrame(() => tick());
+}
+requestAnimationFrame(() => tick());
+addEventListener("resize", () => lanes.length && drawWaves());
+
+addEventListener("keydown", e => {
+  if (e.code === "Space" && !/INPUT|TEXTAREA|BUTTON/.test(e.target.tagName)) { e.preventDefault(); toggle(); }
+});
+
+function status(msg) { const el = $("#status"); if (el) el.textContent = msg; }
+
+function mixLabel() {
+  const on = lanes.filter(audible);
+  if (on.length === lanes.length && on.every(l => l.vol === 100)) return "full mix";
+  const off = lanes.filter(l => !audible(l));
+  if (on.length <= off.length) return "only " + on.map(l => l.stem.name.toLowerCase()).join(", ");
+  return "no " + off.map(l => l.stem.name.toLowerCase()).join(", ") + (on.some(l => l.vol !== 100) ? " (custom levels)" : "");
+}
+
+async function downloadMix() {
+  if (typeof lamejs === "undefined") return status("The MP3 encoder didn't load; check your connection and reload.");
+  const on = lanes.filter(audible);
+  if (!on.length) return status("Everything is muted.");
+  const btn = $("#download"); btn.disabled = true;
+  const songId = song.id, title = song.title;
+  try {
+    status("Mixing…");
+    const sr = lanes[0].buffer.sampleRate, len = Math.ceil(duration() * sr);
+    const off = new OfflineAudioContext(2, len, sr);
+    for (const l of on) {
+      const src = off.createBufferSource(), g = off.createGain();
+      src.buffer = l.buffer; g.gain.value = l.vol / 100;
+      src.connect(g).connect(off.destination); src.start(0);
+    }
+    const out = await off.startRendering();
+    const L = out.getChannelData(0), R = out.getChannelData(1);
+    let peak = 0;
+    for (let i = 0; i < L.length; i++) peak = Math.max(peak, Math.abs(L[i]), Math.abs(R[i]));
+    const scale = peak > 0.97 ? 0.97 / peak : 1;  // turn the whole mix down rather than clip it
+    const toInt = (src, from, to) => {
+      const a = new Int16Array(to - from);
+      for (let i = from; i < to; i++) a[i - from] = Math.max(-32768, Math.min(32767, Math.round(src[i] * scale * 32767)));
+      return a;
+    };
+    const enc = new lamejs.Mp3Encoder(2, sr, 192), chunks = [], block = 1152 * 200;
+    for (let i = 0; i < L.length; i += block) {
+      const e = Math.min(L.length, i + block);
+      const mp3 = enc.encodeBuffer(toInt(L, i, e), toInt(R, i, e));
+      if (mp3.length) chunks.push(new Uint8Array(mp3));
+      if (song && song.id === songId) status(`Encoding MP3… ${Math.round(e / L.length * 100)}%`);
+      await new Promise(r => setTimeout(r));
+    }
+    const end = enc.flush(); if (end.length) chunks.push(new Uint8Array(end));
+    const url = URL.createObjectURL(new Blob(chunks, { type: "audio/mpeg" }));
+    const a = Object.assign(document.createElement("a"), { href: url, download: `${title} - ${mixLabel()}.mp3` });
+    document.body.append(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+    status(scale < 1 ? "Downloaded (turned down a little so it doesn't clip)." : "Downloaded.");
+  } catch (e) {
+    status("Couldn't make the MP3: " + e.message);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+init().catch(e => { $("#player").innerHTML = `<div class="empty">Couldn't load the song list (${e.message}).</div>`; });
+</script>
+</body>
+</html>

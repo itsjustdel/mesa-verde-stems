@@ -21,6 +21,20 @@ Rendering needs, in `tools/` (not committed):
 
 ffmpeg on PATH is used for MP3 export.
 
+## Band site (GitHub Pages)
+
+`docs/` is a static stem mixer for the band: pick a song, mute / solo / level each stem, download the mix as
+an MP3 (mixed and encoded in the browser), or share a link that carries the levels. To add songs:
+
+```bash
+P=C:/Users/itsju/.venvs/stems/Scripts/python.exe
+$P stems.py "music/<album>/<song>.flac" ...        # stems only, into out/<id>/stems (id: e.g. 07-in-64)
+$P build_site.py 07-in-64 ...                       # 192k MP3 stems into docs/songs/<id>, listed in docs/songs.json
+```
+
+Then commit and push; GitHub Pages serves `docs/` from `main` (Settings → Pages → Deploy from a branch →
+`main` / `/docs`). Test locally with `$P -m http.server 8790 --bind 127.0.0.1` inside `docs/`.
+
 ## Player
 
 ```bash

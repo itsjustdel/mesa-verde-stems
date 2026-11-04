@@ -1,0 +1,78 @@
+[
+ {
+  "id": "05-no-more-bad-future",
+  "title": "No More Bad Future",
+  "track": 5,
+  "duration": 201.48,
+  "stems": [
+   {
+    "id": "vocals",
+    "name": "Vocals",
+    "file": "songs/05-no-more-bad-future/vocals.mp3"
+   },
+   {
+    "id": "drums",
+    "name": "Drums",
+    "file": "songs/05-no-more-bad-future/drums.mp3"
+   },
+   {
+    "id": "bass",
+    "name": "Bass",
+    "file": "songs/05-no-more-bad-future/bass.mp3"
+   },
+   {
+    "id": "guitar_L",
+    "name": "Guitar (left)",
+    "file": "songs/05-no-more-bad-future/guitar_L.mp3"
+   },
+   {
+    "id": "guitar_R",
+    "name": "Guitar (right)",
+    "file": "songs/05-no-more-bad-future/guitar_R.mp3"
+   },
+   {
+    "id": "other",
+    "name": "Other",
+    "file": "songs/05-no-more-bad-future/other.mp3"
+   }
+  ]
+ },
+ {
+  "id": "07-in-64",
+  "title": "In '64",
+  "track": 7,
+  "duration": 248.38,
+  "stems": [
+   {
+    "id": "vocals",
+    "name": "Vocals",
+    "file": "songs/07-in-64/vocals.mp3"
+   },
+   {
+    "id": "drums",
+    "name": "Drums",
+    "file": "songs/07-in-64/drums.mp3"
+   },
+   {
+    "id": "bass",
+    "name": "Bass",
+    "file": "songs/07-in-64/bass.mp3"
+   },
+   {
+    "id": "guitar_L",
+    "name": "Guitar (left)",
+    "file": "songs/07-in-64/guitar_L.mp3"
+   },
+   {
+    "id": "guitar_R",
+    "name": "Guitar (right)",
+    "file": "songs/07-in-64/guitar_R.mp3"
+   },
+   {
+    "id": "other",
+    "name": "Other",
+    "file": "songs/07-in-64/other.mp3"
+   }
+  ]
+ }
+]

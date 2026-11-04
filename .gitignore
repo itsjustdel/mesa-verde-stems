@@ -7,3 +7,7 @@ tools/
 __pycache__/
 *.pyc
 tmp/
+# your own song files (the discography), not committed
+music/
+# MP3 mixes exported before the discography re-split
+old-exports/
