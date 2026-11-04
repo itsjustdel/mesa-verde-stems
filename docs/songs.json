@@ -1,5 +1,157 @@
 [
  {
+  "id": "01-a-deep-sleep-without-dreams",
+  "title": "A Deep Sleep Without Dreams",
+  "track": 1,
+  "duration": 378.75,
+  "stems": [
+   {
+    "id": "vocals",
+    "name": "Vocals",
+    "file": "songs/01-a-deep-sleep-without-dreams/vocals.mp3"
+   },
+   {
+    "id": "drums",
+    "name": "Drums",
+    "file": "songs/01-a-deep-sleep-without-dreams/drums.mp3"
+   },
+   {
+    "id": "bass",
+    "name": "Bass",
+    "file": "songs/01-a-deep-sleep-without-dreams/bass.mp3"
+   },
+   {
+    "id": "guitar_L",
+    "name": "Guitar (left)",
+    "file": "songs/01-a-deep-sleep-without-dreams/guitar_L.mp3"
+   },
+   {
+    "id": "guitar_R",
+    "name": "Guitar (right)",
+    "file": "songs/01-a-deep-sleep-without-dreams/guitar_R.mp3"
+   },
+   {
+    "id": "other",
+    "name": "Other",
+    "file": "songs/01-a-deep-sleep-without-dreams/other.mp3"
+   }
+  ]
+ },
+ {
+  "id": "02-for-the-tree-that-fell",
+  "title": "For The Tree That Fell",
+  "track": 2,
+  "duration": 217.23,
+  "stems": [
+   {
+    "id": "vocals",
+    "name": "Vocals",
+    "file": "songs/02-for-the-tree-that-fell/vocals.mp3"
+   },
+   {
+    "id": "drums",
+    "name": "Drums",
+    "file": "songs/02-for-the-tree-that-fell/drums.mp3"
+   },
+   {
+    "id": "bass",
+    "name": "Bass",
+    "file": "songs/02-for-the-tree-that-fell/bass.mp3"
+   },
+   {
+    "id": "guitar_L",
+    "name": "Guitar (left)",
+    "file": "songs/02-for-the-tree-that-fell/guitar_L.mp3"
+   },
+   {
+    "id": "guitar_R",
+    "name": "Guitar (right)",
+    "file": "songs/02-for-the-tree-that-fell/guitar_R.mp3"
+   },
+   {
+    "id": "other",
+    "name": "Other",
+    "file": "songs/02-for-the-tree-that-fell/other.mp3"
+   }
+  ]
+ },
+ {
+  "id": "03-when-the-canary-dies-run-like-fuck",
+  "title": "When The Canary Dies, Run Like Fuck",
+  "track": 3,
+  "duration": 176.93,
+  "stems": [
+   {
+    "id": "vocals",
+    "name": "Vocals",
+    "file": "songs/03-when-the-canary-dies-run-like-fuck/vocals.mp3"
+   },
+   {
+    "id": "drums",
+    "name": "Drums",
+    "file": "songs/03-when-the-canary-dies-run-like-fuck/drums.mp3"
+   },
+   {
+    "id": "bass",
+    "name": "Bass",
+    "file": "songs/03-when-the-canary-dies-run-like-fuck/bass.mp3"
+   },
+   {
+    "id": "guitar_L",
+    "name": "Guitar (left)",
+    "file": "songs/03-when-the-canary-dies-run-like-fuck/guitar_L.mp3"
+   },
+   {
+    "id": "guitar_R",
+    "name": "Guitar (right)",
+    "file": "songs/03-when-the-canary-dies-run-like-fuck/guitar_R.mp3"
+   },
+   {
+    "id": "other",
+    "name": "Other",
+    "file": "songs/03-when-the-canary-dies-run-like-fuck/other.mp3"
+   }
+  ]
+ },
+ {
+  "id": "04-return-to-victories",
+  "title": "Return To Victories",
+  "track": 4,
+  "duration": 303.02,
+  "stems": [
+   {
+    "id": "vocals",
+    "name": "Vocals",
+    "file": "songs/04-return-to-victories/vocals.mp3"
+   },
+   {
+    "id": "drums",
+    "name": "Drums",
+    "file": "songs/04-return-to-victories/drums.mp3"
+   },
+   {
+    "id": "bass",
+    "name": "Bass",
+    "file": "songs/04-return-to-victories/bass.mp3"
+   },
+   {
+    "id": "guitar_L",
+    "name": "Guitar (left)",
+    "file": "songs/04-return-to-victories/guitar_L.mp3"
+   },
+   {
+    "id": "guitar_R",
+    "name": "Guitar (right)",
+    "file": "songs/04-return-to-victories/guitar_R.mp3"
+   },
+   {
+    "id": "other",
+    "name": "Other",
+    "file": "songs/04-return-to-victories/other.mp3"
+   }
+  ]
+ },
+ {
   "id": "05-no-more-bad-future",
   "title": "No More Bad Future",
   "track": 5,
@@ -38,6 +190,44 @@
   ]
  },
  {
+  "id": "06-post-youth",
+  "title": "Post-Youth",
+  "track": 6,
+  "duration": 781.56,
+  "stems": [
+   {
+    "id": "vocals",
+    "name": "Vocals",
+    "file": "songs/06-post-youth/vocals.mp3"
+   },
+   {
+    "id": "drums",
+    "name": "Drums",
+    "file": "songs/06-post-youth/drums.mp3"
+   },
+   {
+    "id": "bass",
+    "name": "Bass",
+    "file": "songs/06-post-youth/bass.mp3"
+   },
+   {
+    "id": "guitar_L",
+    "name": "Guitar (left)",
+    "file": "songs/06-post-youth/guitar_L.mp3"
+   },
+   {
+    "id": "guitar_R",
+    "name": "Guitar (right)",
+    "file": "songs/06-post-youth/guitar_R.mp3"
+   },
+   {
+    "id": "other",
+    "name": "Other",
+    "file": "songs/06-post-youth/other.mp3"
+   }
+  ]
+ },
+ {
   "id": "07-in-64",
   "title": "In '64",
   "track": 7,
@@ -72,6 +262,343 @@
     "id": "other",
     "name": "Other",
     "file": "songs/07-in-64/other.mp3"
+   }
+  ]
+ },
+ {
+  "id": "08-clarity-with-distance",
+  "title": "Clarity With Distance",
+  "track": 8,
+  "duration": 260.21,
+  "stems": [
+   {
+    "id": "vocals",
+    "name": "Vocals",
+    "file": "songs/08-clarity-with-distance/vocals.mp3"
+   },
+   {
+    "id": "drums",
+    "name": "Drums",
+    "file": "songs/08-clarity-with-distance/drums.mp3"
+   },
+   {
+    "id": "bass",
+    "name": "Bass",
+    "file": "songs/08-clarity-with-distance/bass.mp3"
+   },
+   {
+    "id": "guitar_L",
+    "name": "Guitar (left)",
+    "file": "songs/08-clarity-with-distance/guitar_L.mp3"
+   },
+   {
+    "id": "guitar_R",
+    "name": "Guitar (right)",
+    "file": "songs/08-clarity-with-distance/guitar_R.mp3"
+   },
+   {
+    "id": "other",
+    "name": "Other",
+    "file": "songs/08-clarity-with-distance/other.mp3"
+   }
+  ]
+ },
+ {
+  "id": "09-substance-abuse",
+  "title": "Substance Abuse",
+  "track": 9,
+  "duration": 141.01,
+  "stems": [
+   {
+    "id": "vocals",
+    "name": "Vocals",
+    "file": "songs/09-substance-abuse/vocals.mp3"
+   },
+   {
+    "id": "drums",
+    "name": "Drums",
+    "file": "songs/09-substance-abuse/drums.mp3"
+   },
+   {
+    "id": "bass",
+    "name": "Bass",
+    "file": "songs/09-substance-abuse/bass.mp3"
+   },
+   {
+    "id": "guitar_L",
+    "name": "Guitar (left)",
+    "file": "songs/09-substance-abuse/guitar_L.mp3"
+   },
+   {
+    "id": "guitar_R",
+    "name": "Guitar (right)",
+    "file": "songs/09-substance-abuse/guitar_R.mp3"
+   },
+   {
+    "id": "other",
+    "name": "Other",
+    "file": "songs/09-substance-abuse/other.mp3"
+   }
+  ]
+ },
+ {
+  "id": "10-untitled",
+  "title": "Untitled",
+  "track": 10,
+  "duration": 66.04,
+  "stems": [
+   {
+    "id": "vocals",
+    "name": "Vocals",
+    "file": "songs/10-untitled/vocals.mp3"
+   },
+   {
+    "id": "drums",
+    "name": "Drums",
+    "file": "songs/10-untitled/drums.mp3"
+   },
+   {
+    "id": "bass",
+    "name": "Bass",
+    "file": "songs/10-untitled/bass.mp3"
+   },
+   {
+    "id": "guitar",
+    "name": "Guitar",
+    "file": "songs/10-untitled/guitar.mp3"
+   },
+   {
+    "id": "other",
+    "name": "Other",
+    "file": "songs/10-untitled/other.mp3"
+   }
+  ]
+ },
+ {
+  "id": "11-mrb",
+  "title": "MRB",
+  "track": 11,
+  "duration": 290.09,
+  "stems": [
+   {
+    "id": "vocals",
+    "name": "Vocals",
+    "file": "songs/11-mrb/vocals.mp3"
+   },
+   {
+    "id": "drums",
+    "name": "Drums",
+    "file": "songs/11-mrb/drums.mp3"
+   },
+   {
+    "id": "bass",
+    "name": "Bass",
+    "file": "songs/11-mrb/bass.mp3"
+   },
+   {
+    "id": "guitar_L",
+    "name": "Guitar (left)",
+    "file": "songs/11-mrb/guitar_L.mp3"
+   },
+   {
+    "id": "guitar_R",
+    "name": "Guitar (right)",
+    "file": "songs/11-mrb/guitar_R.mp3"
+   },
+   {
+    "id": "other",
+    "name": "Other",
+    "file": "songs/11-mrb/other.mp3"
+   }
+  ]
+ },
+ {
+  "id": "12-dance-dance-dance",
+  "title": "Dance Dance Dance",
+  "track": 12,
+  "duration": 711.84,
+  "stems": [
+   {
+    "id": "vocals",
+    "name": "Vocals",
+    "file": "songs/12-dance-dance-dance/vocals.mp3"
+   },
+   {
+    "id": "drums",
+    "name": "Drums",
+    "file": "songs/12-dance-dance-dance/drums.mp3"
+   },
+   {
+    "id": "bass",
+    "name": "Bass",
+    "file": "songs/12-dance-dance-dance/bass.mp3"
+   },
+   {
+    "id": "guitar_L",
+    "name": "Guitar (left)",
+    "file": "songs/12-dance-dance-dance/guitar_L.mp3"
+   },
+   {
+    "id": "guitar_R",
+    "name": "Guitar (right)",
+    "file": "songs/12-dance-dance-dance/guitar_R.mp3"
+   },
+   {
+    "id": "other",
+    "name": "Other",
+    "file": "songs/12-dance-dance-dance/other.mp3"
+   }
+  ]
+ },
+ {
+  "id": "13-any-excuse-for-a-waste",
+  "title": "Any Excuse For A Waste",
+  "track": 13,
+  "duration": 497.06,
+  "stems": [
+   {
+    "id": "vocals",
+    "name": "Vocals",
+    "file": "songs/13-any-excuse-for-a-waste/vocals.mp3"
+   },
+   {
+    "id": "drums",
+    "name": "Drums",
+    "file": "songs/13-any-excuse-for-a-waste/drums.mp3"
+   },
+   {
+    "id": "bass",
+    "name": "Bass",
+    "file": "songs/13-any-excuse-for-a-waste/bass.mp3"
+   },
+   {
+    "id": "guitar_L",
+    "name": "Guitar (left)",
+    "file": "songs/13-any-excuse-for-a-waste/guitar_L.mp3"
+   },
+   {
+    "id": "guitar_R",
+    "name": "Guitar (right)",
+    "file": "songs/13-any-excuse-for-a-waste/guitar_R.mp3"
+   },
+   {
+    "id": "other",
+    "name": "Other",
+    "file": "songs/13-any-excuse-for-a-waste/other.mp3"
+   }
+  ]
+ },
+ {
+  "id": "14-church-gambler",
+  "title": "Church Gambler",
+  "track": 14,
+  "duration": 246.28,
+  "stems": [
+   {
+    "id": "vocals",
+    "name": "Vocals",
+    "file": "songs/14-church-gambler/vocals.mp3"
+   },
+   {
+    "id": "drums",
+    "name": "Drums",
+    "file": "songs/14-church-gambler/drums.mp3"
+   },
+   {
+    "id": "bass",
+    "name": "Bass",
+    "file": "songs/14-church-gambler/bass.mp3"
+   },
+   {
+    "id": "guitar_L",
+    "name": "Guitar (left)",
+    "file": "songs/14-church-gambler/guitar_L.mp3"
+   },
+   {
+    "id": "guitar_R",
+    "name": "Guitar (right)",
+    "file": "songs/14-church-gambler/guitar_R.mp3"
+   },
+   {
+    "id": "other",
+    "name": "Other",
+    "file": "songs/14-church-gambler/other.mp3"
+   }
+  ]
+ },
+ {
+  "id": "15-aim-method",
+  "title": "Aim. Method",
+  "track": 15,
+  "duration": 236.93,
+  "stems": [
+   {
+    "id": "vocals",
+    "name": "Vocals",
+    "file": "songs/15-aim-method/vocals.mp3"
+   },
+   {
+    "id": "drums",
+    "name": "Drums",
+    "file": "songs/15-aim-method/drums.mp3"
+   },
+   {
+    "id": "bass",
+    "name": "Bass",
+    "file": "songs/15-aim-method/bass.mp3"
+   },
+   {
+    "id": "guitar_L",
+    "name": "Guitar (left)",
+    "file": "songs/15-aim-method/guitar_L.mp3"
+   },
+   {
+    "id": "guitar_R",
+    "name": "Guitar (right)",
+    "file": "songs/15-aim-method/guitar_R.mp3"
+   },
+   {
+    "id": "other",
+    "name": "Other",
+    "file": "songs/15-aim-method/other.mp3"
+   }
+  ]
+ },
+ {
+  "id": "16-twice-as-fucked-in-half-the-time",
+  "title": "Twice As Fucked (In Half The Time)",
+  "track": 16,
+  "duration": 394.34,
+  "stems": [
+   {
+    "id": "vocals",
+    "name": "Vocals",
+    "file": "songs/16-twice-as-fucked-in-half-the-time/vocals.mp3"
+   },
+   {
+    "id": "drums",
+    "name": "Drums",
+    "file": "songs/16-twice-as-fucked-in-half-the-time/drums.mp3"
+   },
+   {
+    "id": "bass",
+    "name": "Bass",
+    "file": "songs/16-twice-as-fucked-in-half-the-time/bass.mp3"
+   },
+   {
+    "id": "guitar_L",
+    "name": "Guitar (left)",
+    "file": "songs/16-twice-as-fucked-in-half-the-time/guitar_L.mp3"
+   },
+   {
+    "id": "guitar_R",
+    "name": "Guitar (right)",
+    "file": "songs/16-twice-as-fucked-in-half-the-time/guitar_R.mp3"
+   },
+   {
+    "id": "other",
+    "name": "Other",
+    "file": "songs/16-twice-as-fucked-in-half-the-time/other.mp3"
    }
   ]
  }
